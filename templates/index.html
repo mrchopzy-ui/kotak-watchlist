@@ -9,26 +9,40 @@
         body {
             font-family: Arial, sans-serif;
             background: #f4f6f8;
-            margin: 0;
             padding: 20px;
         }
 
         h1 {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        .search-box {
-            width: 300nexuspx;
+        .search-row {
+            display: flex;
+            gap: 10px;
+            width: 520px;
+            position: relative;
+        }
+
+        #search {
+            flex: 1;
             padding: 10px;
             font-size: 16px;
         }
 
+        #addBtn {
+            padding: 10px 16px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
         .suggestions {
+            position: absolute;
+            top: 45px;
+            left: 0;
+            right: 0;
             background: white;
             border: 1px solid #ccc;
-            max-width: 400px;
-            position: absolute;
-            z-index: 10;
+            z-index: 1000;
         }
 
         .suggestions div {
@@ -42,8 +56,8 @@
 
         table {
             width: 100%;
-            border-collapse: collapse;
             margin-top: 20px;
+            border-collapse: collapse;
             background: white;
         }
 
@@ -57,10 +71,10 @@
             background: #f0f0f0;
         }
 
-        .delete-btn {
+        .delete {
             color: red;
-            cursor: pointer;
             font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -69,14 +83,17 @@
 
 <h1>Nexus Asset Management</h1>
 
-<input id="search" class="search-box" placeholder="Type stock symbol..." autocomplete="off">
-<div id="suggestions" class="suggestions"></div>
+<div class="search-row">
+    <input id="search" placeholder="Type stock symbol or name (e.g. RAIN, ITC)" autocomplete="off">
+    <button id="addBtn">Add</button>
+    <div id="suggestions" class="suggestions"></div>
+</div>
 
 <table>
     <thead>
         <tr>
             <th>Symbol</th>
-            <th>Company</th>
+            <th>Company Name</th>
             <th>LTP</th>
             <th>% Change</th>
             <th>Open</th>
@@ -93,32 +110,34 @@
 <script>
 let selectedStock = null;
 
-// 🔍 SEARCH SUGGESTIONS
+// 🔍 SEARCH
 $("#search").on("input", function () {
-    let q = $(this).val();
-    if (q.length < 2) {
-        $("#suggestions").empty();
-        return;
-    }
+    const q = $(this).val();
+    $("#suggestions").empty();
+    selectedStock = null;
+
+    if (q.length < 1) return;
 
     $.get("/search?q=" + q, function (data) {
-        $("#suggestions").empty();
         data.forEach(s => {
-            let div = $("<div>").text(s.trading_symbol);
-            div.click(() => {
-                selectedStock = s;
-                $("#search").val(s.trading_symbol);
-                $("#suggestions").empty();
-                addStock();
-            });
-            $("#suggestions").append(div);
+            const row = $("<div>")
+                .text(s.trading_symbol + " — " + s.company_name)
+                .click(() => {
+                    selectedStock = s;
+                    $("#search").val(s.trading_symbol);
+                    $("#suggestions").empty();
+                });
+            $("#suggestions").append(row);
         });
     });
 });
 
-// ➕ ADD STOCK
-function addStock() {
-    if (!selectedStock) return;
+// ➕ ADD
+$("#addBtn").click(function () {
+    if (!selectedStock) {
+        alert("Please select a stock from suggestions");
+        return;
+    }
 
     $.ajax({
         url: "/add",
@@ -128,12 +147,13 @@ function addStock() {
         success: () => {
             selectedStock = null;
             $("#search").val("");
+            $("#suggestions").empty();
             loadPrices();
         }
     });
-}
+});
 
-// ❌ REMOVE STOCK
+// ❌ REMOVE
 function removeStock(key) {
     $.ajax({
         url: "/remove",
@@ -147,11 +167,11 @@ function removeStock(key) {
 // 📈 LOAD PRICES
 function loadPrices() {
     $.get("/prices", function (data) {
-        let tbody = $("#watchlist");
+        const tbody = $("#watchlist");
         tbody.empty();
 
         data.forEach(s => {
-            let key = s.exchange + "|" + s.exchange_token;
+            const key = s.exchange + "|" + s.exchange_token;
             tbody.append(`
                 <tr>
                     <td>${s.trading_symbol}</td>
@@ -163,14 +183,13 @@ function loadPrices() {
                     <td>${s.ohlc.low.toFixed(2)}</td>
                     <td>${s.ohlc.close.toFixed(2)}</td>
                     <td>${formatVolume(s.last_volume)}</td>
-                    <td class="delete-btn" onclick="removeStock('${key}')">✖</td>
+                    <td class="delete" onclick="removeStock('${key}')">✖</td>
                 </tr>
             `);
         });
     });
 }
 
-// 📊 VOLUME FORMAT
 function formatVolume(v) {
     if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
     if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
