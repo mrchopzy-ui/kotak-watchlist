@@ -9,21 +9,16 @@ app = Flask(__name__)
 # ======================================================
 # 🔐 ENVIRONMENT VARIABLES
 # ======================================================
-ACCESS_TOKEN = os.environ.get("KOTAK_ACCESS_TOKEN")
-MOBILE = os.environ.get("KOTAK_MOBILE")
-USER_ID = os.environ.get("KOTAK_USER_ID")
-MPIN = os.environ.get("KOTAK_MPIN")
-TOTP_SECRET = os.environ.get("KOTAK_TOTP_SECRET")
-
-if not all([ACCESS_TOKEN, MOBILE, USER_ID, MPIN, TOTP_SECRET]):
-    raise RuntimeError("❌ Missing Kotak environment variables")
+ACCESS_TOKEN = os.environ["KOTAK_ACCESS_TOKEN"]
+MOBILE = os.environ["KOTAK_MOBILE"]
+USER_ID = os.environ["KOTAK_USER_ID"]
+MPIN = os.environ["KOTAK_MPIN"]
+TOTP_SECRET = os.environ["KOTAK_TOTP_SECRET"]
 
 # ======================================================
 # 🌐 GLOBAL STATE
 # ======================================================
 BASE_URL = None
-SESSION_TOKEN = None
-SESSION_SID = None
 
 WATCHLISTS = {
     "Watchlist 1": [],
@@ -39,7 +34,7 @@ SCRIP_MASTER = []
 # 🔑 LOGIN (KOTAK v3)
 # ======================================================
 def login():
-    global BASE_URL, SESSION_TOKEN, SESSION_SID
+    global BASE_URL
 
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
@@ -56,75 +51,56 @@ def login():
             "totp": totp
         },
         timeout=10
-    )
-    r1.raise_for_status()
-    r1 = r1.json()
-
-    view_token = r1["data"]["token"]
-    view_sid = r1["data"]["sid"]
+    ).json()
 
     r2 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
         headers={
             "Authorization": ACCESS_TOKEN,
             "neo-fin-key": "neotradeapi",
-            "sid": view_sid,
-            "Auth": view_token,
+            "sid": r1["data"]["sid"],
+            "Auth": r1["data"]["token"],
             "Content-Type": "application/json"
         },
         json={"mpin": MPIN},
         timeout=10
-    )
-    r2.raise_for_status()
-    r2 = r2.json()
+    ).json()
 
     BASE_URL = r2["data"]["baseUrl"]
-    SESSION_TOKEN = r2["data"]["token"]
-    SESSION_SID = r2["data"]["sid"]
 
 
 # ======================================================
-# 📂 LOAD SCRIP MASTER (NSE EQ ONLY)
+# 📂 LOAD SCRIP MASTER (LOCAL FILE — NO API CALL)
 # ======================================================
 def load_scrip_master():
     global SCRIP_MASTER
 
-    r = requests.get(
-        f"{BASE_URL}/script-details/1.0/masterscrip/file-paths",
-        headers={"Authorization": ACCESS_TOKEN},
-        timeout=10
-    )
-    r.raise_for_status()
-    r = r.json()
+    path = os.path.join("data", "nse_eq_scrip_master.csv")
 
-    nse_file = next(
-        f for f in r["data"]["filesPaths"]
-        if "nse_cm" in f and "cm-v1" in f
-    )
+    if not os.path.exists(path):
+        raise RuntimeError("❌ Missing scrip master CSV file")
 
-    csv_text = requests.get(nse_file, timeout=20).text.splitlines()
-    reader = csv.DictReader(csv_text)
-
-    for row in reader:
-        if row.get("series") == "EQ":
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
             SCRIP_MASTER.append({
                 "exchange": "nse_cm",
-                "exchange_token": row["pSymbol"],
-                "trading_symbol": row["pTrdSymbol"],
-                "company_name": row.get("name") or row.get("symbol") or row["pTrdSymbol"]
+                "exchange_token": row["exchange_token"],
+                "trading_symbol": row["trading_symbol"],
+                "company_name": row["company_name"]
             })
 
     if not SCRIP_MASTER:
-        raise RuntimeError("❌ Scrip master loaded ZERO stocks")
+        raise RuntimeError("❌ Local scrip master is empty")
 
 
 # ======================================================
-# 🚀 FORCE INITIALIZATION (CRITICAL)
+# 🚀 INITIALIZE (RUNS UNDER GUNICORN)
 # ======================================================
 print("🔐 Logging in to Kotak...")
 login()
 
-print("📂 Loading NSE EQ scrip master...")
+print("📂 Loading LOCAL scrip master...")
 load_scrip_master()
 
 print(f"✅ Loaded {len(SCRIP_MASTER)} EQ stocks")
