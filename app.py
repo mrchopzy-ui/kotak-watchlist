@@ -1,71 +1,43 @@
-from flask import Flask, render_template, jsonify, request
-import requests, pyotp, csv, io, json, os
+import os
+import csv
+import requests
+import pyotp
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-# ================= USER CONFIG =================
-ACCESS_TOKEN = "5299a2a1-21fa-42e2-b9b3-b63be76a2553"
-MOBILE_NUMBER = "+919551441970"
-USER_ID = "YALD5"
-MPIN = "124689"
-TOTP_SECRET = "YOYAZGFRWAU2FXZM2XA43RVQVU"
-# ==============================================
+# ======================================================
+# 🔐 ENVIRONMENT VARIABLES (FROM RENDER)
+# ======================================================
+ACCESS_TOKEN = os.environ["KOTAK_ACCESS_TOKEN"]
+MOBILE = os.environ["KOTAK_MOBILE"]
+USER_ID = os.environ["KOTAK_USER_ID"]
+MPIN = os.environ["KOTAK_MPIN"]
+TOTP_SECRET = os.environ["KOTAK_TOTP_SECRET"]
 
-WATCHLIST_FILE = "watchlist.json"
-
+# ======================================================
+# 🌐 GLOBAL STATE
+# ======================================================
 BASE_URL = None
 SESSION_TOKEN = None
 SESSION_SID = None
 
-WATCHLISTS = {}          # { tab_name: [stocks] }
-TAB_ORDER = []           # ["Watchlist 1", "Watchlist 2", ...]
-ACTIVE_TAB = None
+WATCHLISTS = {
+    "Watchlist 1": [],
+    "Watchlist 2": [],
+    "Watchlist 3": []
+}
+ACTIVE_TAB = "Watchlist 1"
 
-SCRIPS = []
-NSE_NAMES = {}
+SCRIP_MASTER = []
 
-# ================= WATCHLIST LOAD/SAVE =================
-def load_watchlists():
-    global WATCHLISTS, TAB_ORDER, ACTIVE_TAB
 
-    if not os.path.exists(WATCHLIST_FILE):
-        WATCHLISTS = {
-            "Watchlist 1": [],
-            "Watchlist 2": [],
-            "Watchlist 3": []
-        }
-        TAB_ORDER = list(WATCHLISTS.keys())
-        ACTIVE_TAB = TAB_ORDER[0]
-        save_watchlists()
-        return
-
-    with open(WATCHLIST_FILE, "r") as f:
-        data = json.load(f)
-
-    # 🔁 Migration support
-    if isinstance(data, list):
-        WATCHLISTS = {
-            "Watchlist 1": data,
-            "Watchlist 2": [],
-            "Watchlist 3": []
-        }
-        TAB_ORDER = list(WATCHLISTS.keys())
-    else:
-        WATCHLISTS = data.get("watchlists", data)
-        TAB_ORDER = data.get("tab_order", list(WATCHLISTS.keys()))
-
-    ACTIVE_TAB = TAB_ORDER[0]
-
-def save_watchlists():
-    with open(WATCHLIST_FILE, "w") as f:
-        json.dump({
-            "watchlists": WATCHLISTS,
-            "tab_order": TAB_ORDER
-        }, f, indent=2)
-
-# ================= LOGIN =================
-def kotak_login():
+# ======================================================
+# 🔑 LOGIN (KOTAK v3)
+# ======================================================
+def login():
     global BASE_URL, SESSION_TOKEN, SESSION_SID
+
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
     r1 = requests.post(
@@ -75,16 +47,23 @@ def kotak_login():
             "neo-fin-key": "neotradeapi",
             "Content-Type": "application/json"
         },
-        json={"mobileNumber": MOBILE_NUMBER, "ucc": USER_ID, "totp": totp}
+        json={
+            "mobileNumber": MOBILE,
+            "ucc": USER_ID,
+            "totp": totp
+        }
     ).json()
+
+    view_token = r1["data"]["token"]
+    view_sid = r1["data"]["sid"]
 
     r2 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
         headers={
             "Authorization": ACCESS_TOKEN,
             "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"],
+            "sid": view_sid,
+            "Auth": view_token,
             "Content-Type": "application/json"
         },
         json={"mpin": MPIN}
@@ -94,120 +73,117 @@ def kotak_login():
     SESSION_TOKEN = r2["data"]["token"]
     SESSION_SID = r2["data"]["sid"]
 
-# ================= NSE COMPANY NAMES =================
-def load_nse_company_names():
-    url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
-    csv_text = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}).text
-    reader = csv.DictReader(io.StringIO(csv_text))
-    for r in reader:
-        NSE_NAMES[r["SYMBOL"]] = r["NAME OF COMPANY"].title()
 
-# ================= EQ SCRIP MASTER =================
+# ======================================================
+# 📂 LOAD SCRIP MASTER (NSE EQ ONLY)
+# ======================================================
 def load_scrip_master():
+    global SCRIP_MASTER
+
     r = requests.get(
         f"{BASE_URL}/script-details/1.0/masterscrip/file-paths",
         headers={"Authorization": ACCESS_TOKEN}
     ).json()
 
-    file = [f for f in r["data"]["filesPaths"] if "nse_cm" in f][0]
-    csv_text = requests.get(file).text
-    reader = csv.DictReader(io.StringIO(csv_text))
+    nse_file = [x for x in r["data"]["filesPaths"] if "nse_cm" in x][0]
+    csv_text = requests.get(nse_file).text.splitlines()
 
+    reader = csv.DictReader(csv_text)
     for row in reader:
-        token = row.get("pSymbol")
-        trd = row.get("pTrdSymbol")
-        if not token or not trd or not trd.endswith("-EQ"):
-            continue
+        if row.get("series") == "EQ":
+            SCRIP_MASTER.append({
+                "exchange": "nse_cm",
+                "exchange_token": row["pSymbol"],
+                "trading_symbol": row["pTrdSymbol"],
+                "company_name": row.get("name", row["pTrdSymbol"])
+            })
 
-        base = trd.replace("-EQ", "")
-        SCRIPS.append({
-            "symbol": f"nse_cm|{token}",
-            "trading_symbol": trd,
-            "company_name": NSE_NAMES.get(base, trd)
-        })
 
-# ================= QUOTES =================
-def get_quotes(tab):
-    wl = WATCHLISTS.get(tab, [])
-    if not wl:
-        return []
-
-    symbols = ",".join(w["symbol"] for w in wl)
-    url = f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{symbols}/all"
-    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-
-    out = []
-    for q in data:
-        key = f"{q['exchange']}|{q['exchange_token']}"
-        meta = next(w for w in wl if w["symbol"] == key)
-        q["company_name"] = meta["company_name"]
-        q["trading_symbol"] = meta["trading_symbol"]
-        out.append(q)
-    return out
-
-# ================= ROUTES =================
-@app.route("/")
-def index():
-    return render_template("index.html", tabs=TAB_ORDER)
-
+# ======================================================
+# 🔍 SEARCH (SYMBOL + COMPANY)
+# ======================================================
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["company_name"].lower()][:8])
+    q = request.args.get("q", "").lower().strip()
+    if not q:
+        return jsonify([])
 
-@app.route("/set_tab", methods=["POST"])
-def set_tab():
-    global ACTIVE_TAB
-    ACTIVE_TAB = request.json["tab"]
-    return jsonify({"ok": True})
+    results = []
+    for s in SCRIP_MASTER:
+        if q in s["trading_symbol"].lower() or q in s["company_name"].lower():
+            results.append(s)
 
-@app.route("/reorder_tabs", methods=["POST"])
-def reorder_tabs():
-    global TAB_ORDER
-    TAB_ORDER = request.json["order"]
-    save_watchlists()
-    return jsonify({"ok": True})
+    return jsonify(results[:10])
 
-@app.route("/rename_tab", methods=["POST"])
-def rename_tab():
-    global ACTIVE_TAB
-    old = request.json["old"]
-    new = request.json["new"].strip()
-    if not new or new in WATCHLISTS:
-        return jsonify({"ok": False})
 
-    WATCHLISTS[new] = WATCHLISTS.pop(old)
-    TAB_ORDER[TAB_ORDER.index(old)] = new
-    if ACTIVE_TAB == old:
-        ACTIVE_TAB = new
-    save_watchlists()
-    return jsonify({"ok": True})
-
+# ======================================================
+# ➕ ADD / ❌ REMOVE
+# ======================================================
 @app.route("/add", methods=["POST"])
 def add():
-    if len(WATCHLISTS[ACTIVE_TAB]) < 10:
-        if request.json not in WATCHLISTS[ACTIVE_TAB]:
-            WATCHLISTS[ACTIVE_TAB].append(request.json)
-            save_watchlists()
-    return jsonify({"ok": True})
+    s = request.json
+    if s not in WATCHLISTS[ACTIVE_TAB]:
+        WATCHLISTS[ACTIVE_TAB].append(s)
+    return "", 204
+
 
 @app.route("/remove", methods=["POST"])
 def remove():
-    sym = request.json["symbol"]
+    key = request.json["symbol"]
     WATCHLISTS[ACTIVE_TAB] = [
-        w for w in WATCHLISTS[ACTIVE_TAB] if w["symbol"] != sym
+        s for s in WATCHLISTS[ACTIVE_TAB]
+        if f"{s['exchange']}|{s['exchange_token']}" != key
     ]
-    save_watchlists()
-    return jsonify({"ok": True})
+    return "", 204
 
+
+# ======================================================
+# 📈 QUOTES
+# ======================================================
 @app.route("/prices")
 def prices():
-    return jsonify(get_quotes(ACTIVE_TAB))
+    wl = WATCHLISTS[ACTIVE_TAB]
+    if not wl:
+        return jsonify([])
 
-# ================= START =================
+    q = ",".join([f"{s['exchange']}|{s['exchange_token']}" for s in wl])
+    url = f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{q}/all"
+
+    r = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+
+    out = []
+    for i, d in enumerate(r):
+        s = wl[i]
+        ohlc = d.get("ohlc", {})
+        out.append({
+            **s,
+            "ltp": float(d.get("ltp", 0)),
+            "per_change": float(d.get("per_change", 0)),
+            "last_volume": float(d.get("last_volume", 0)),
+            "ohlc": {
+                "open": float(ohlc.get("open", 0)),
+                "high": float(ohlc.get("high", 0)),
+                "low": float(ohlc.get("low", 0)),
+                "close": float(ohlc.get("close", 0))
+            }
+        })
+    return jsonify(out)
+
+
+# ======================================================
+# 🌐 UI
+# ======================================================
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+# ======================================================
+# 🚀 START
+# ======================================================
 if __name__ == "__main__":
-    kotak_login()
-    load_nse_company_names()
+    print("Logging in...")
+    login()
+    print("Loading scrip master...")
     load_scrip_master()
-    load_watchlists()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
