@@ -9,16 +9,21 @@ app = Flask(__name__)
 # ======================================================
 # 🔐 ENVIRONMENT VARIABLES
 # ======================================================
-ACCESS_TOKEN = os.environ["KOTAK_ACCESS_TOKEN"]
-MOBILE = os.environ["KOTAK_MOBILE"]
-USER_ID = os.environ["KOTAK_USER_ID"]
-MPIN = os.environ["KOTAK_MPIN"]
-TOTP_SECRET = os.environ["KOTAK_TOTP_SECRET"]
+ACCESS_TOKEN = os.environ.get("KOTAK_ACCESS_TOKEN")
+MOBILE = os.environ.get("KOTAK_MOBILE")
+USER_ID = os.environ.get("KOTAK_USER_ID")
+MPIN = os.environ.get("KOTAK_MPIN")
+TOTP_SECRET = os.environ.get("KOTAK_TOTP_SECRET")
+
+if not all([ACCESS_TOKEN, MOBILE, USER_ID, MPIN, TOTP_SECRET]):
+    raise RuntimeError("❌ Missing Kotak environment variables")
 
 # ======================================================
 # 🌐 GLOBAL STATE
 # ======================================================
 BASE_URL = None
+SESSION_TOKEN = None
+SESSION_SID = None
 
 WATCHLISTS = {
     "Watchlist 1": [],
@@ -29,13 +34,11 @@ ACTIVE_TAB = "Watchlist 1"
 
 SCRIP_MASTER = []
 
-
 # ======================================================
-# 🔑 LOGIN (KOTAK v3)
+# 🔑 LOGIN
 # ======================================================
 def login():
-    global BASE_URL
-
+    global BASE_URL, SESSION_TOKEN, SESSION_SID
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
     r1 = requests.post(
@@ -45,21 +48,20 @@ def login():
             "neo-fin-key": "neotradeapi",
             "Content-Type": "application/json"
         },
-        json={
-            "mobileNumber": MOBILE,
-            "ucc": USER_ID,
-            "totp": totp
-        },
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp},
         timeout=10
     ).json()
+
+    view_token = r1["data"]["token"]
+    view_sid = r1["data"]["sid"]
 
     r2 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
         headers={
             "Authorization": ACCESS_TOKEN,
             "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"],
+            "sid": view_sid,
+            "Auth": view_token,
             "Content-Type": "application/json"
         },
         json={"mpin": MPIN},
@@ -67,114 +69,70 @@ def login():
     ).json()
 
     BASE_URL = r2["data"]["baseUrl"]
-
+    SESSION_TOKEN = r2["data"]["token"]
+    SESSION_SID = r2["data"]["sid"]
 
 # ======================================================
-# 📂 LOAD SCRIP MASTER (LOCAL FILE — NO API CALL)
+# 📂 LOAD LOCAL SCRIP MASTER
 # ======================================================
-def load_scrip_master():
+def load_local_scrip_master():
     global SCRIP_MASTER
-
     path = os.path.join("data", "nse_eq_scrip_master.csv")
 
     if not os.path.exists(path):
-        raise RuntimeError("❌ Missing scrip master CSV file")
+        raise RuntimeError("❌ nse_eq_scrip_master.csv not found")
 
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        for row in reader:
+        for r in reader:
             SCRIP_MASTER.append({
                 "exchange": "nse_cm",
-                "exchange_token": row["exchange_token"],
-                "trading_symbol": row["trading_symbol"],
-                "company_name": row["company_name"]
+                "exchange_token": r["exchange_token"],
+                "trading_symbol": r["trading_symbol"],
+                "company_name": r["company_name"]
             })
 
     if not SCRIP_MASTER:
         raise RuntimeError("❌ Local scrip master is empty")
 
-
 # ======================================================
-# 🚀 INITIALIZE (RUNS UNDER GUNICORN)
+# 🚀 INIT
 # ======================================================
 print("🔐 Logging in to Kotak...")
 login()
 
 print("📂 Loading LOCAL scrip master...")
-load_scrip_master()
+load_local_scrip_master()
 
-print(f"✅ Loaded {len(SCRIP_MASTER)} EQ stocks")
-
+print(f"✅ Loaded {len(SCRIP_MASTER)} stocks")
 
 # ======================================================
 # 🔍 SEARCH
 # ======================================================
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").lower().strip()
-    if not q:
-        return jsonify([])
-
+    q = request.args.get("q", "").lower()
     return jsonify([
         s for s in SCRIP_MASTER
         if q in s["trading_symbol"].lower()
-        or q in s["company_name"].lower()
     ][:10])
 
-
 # ======================================================
-# ➕ ADD / ❌ REMOVE
+# ➕ ADD
 # ======================================================
 @app.route("/add", methods=["POST"])
 def add():
-    s = request.json
-    if s not in WATCHLISTS[ACTIVE_TAB]:
-        WATCHLISTS[ACTIVE_TAB].append(s)
+    stock = request.json
+    if stock not in WATCHLISTS[ACTIVE_TAB]:
+        WATCHLISTS[ACTIVE_TAB].append(stock)
     return "", 204
-
-
-@app.route("/remove", methods=["POST"])
-def remove():
-    key = request.json["symbol"]
-    WATCHLISTS[ACTIVE_TAB] = [
-        s for s in WATCHLISTS[ACTIVE_TAB]
-        if f"{s['exchange']}|{s['exchange_token']}" != key
-    ]
-    return "", 204
-
 
 # ======================================================
-# 📈 QUOTES
+# 📈 PRICES
 # ======================================================
 @app.route("/prices")
 def prices():
-    wl = WATCHLISTS[ACTIVE_TAB]
-    if not wl:
-        return jsonify([])
-
-    q = ",".join([f"{s['exchange']}|{s['exchange_token']}" for s in wl])
-    url = f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{q}/all"
-
-    r = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-
-    out = []
-    for i, d in enumerate(r):
-        s = wl[i]
-        ohlc = d.get("ohlc", {})
-        out.append({
-            **s,
-            "ltp": float(d.get("ltp", 0)),
-            "per_change": float(d.get("per_change", 0)),
-            "last_volume": float(d.get("last_volume", 0)),
-            "ohlc": {
-                "open": float(ohlc.get("open", 0)),
-                "high": float(ohlc.get("high", 0)),
-                "low": float(ohlc.get("low", 0)),
-                "close": float(ohlc.get("close", 0))
-            }
-        })
-    return jsonify(out)
-
+    return jsonify(WATCHLISTS[ACTIVE_TAB])
 
 # ======================================================
 # 🌐 UI
@@ -182,3 +140,9 @@ def prices():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+# ======================================================
+# 🟢 PORT BINDING (CRITICAL FOR RENDER)
+# ======================================================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
