@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Nexus Asset Management</title>
+
+<style>
+:root{
+    --bg:#f4f6fa;
+    --panel:#ffffff;
+    --panel-2:#f9fafb;
+    --border:#e5e7eb;
+    --text:#111827;
+    --muted:#6b7280;
+    --blue:#2563eb;
+    --green:#16a34a;
+    --red:#dc2626;
+}
+
+body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Segoe UI, system-ui;
+}
+
+.container{
+    max-width:1500px;
+    margin:auto;
+    padding:16px 18px;
+    animation:fade .35s ease;
+}
+
+@keyframes fade{
+    from{opacity:0;transform:translateY(4px)}
+    to{opacity:1}
+}
+
+h1{
+    margin:0 0 12px;
+    font-size:22px;
+    font-weight:600;
+}
+
+/* ---------- TABS ---------- */
+.tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+}
+.tab{
+    padding:6px 14px;
+    font-size:12px;
+    border-radius:16px;
+    background:var(--panel);
+    cursor:pointer;
+    transition:.2s;
+    border:1px solid var(--border);
+}
+.tab:hover{background:#eef2ff}
+.tab.active{
+    background:var(--blue);
+    color:white;
+}
+
+/* ---------- SEARCH ---------- */
+input{
+    width:100%;
+    padding:9px 12px;
+    font-size:13px;
+    background:var(--panel);
+    color:var(--text);
+    border-radius:6px;
+    border:1px solid var(--border);
+    outline:none;
+}
+input:focus{border-color:var(--blue)}
+
+.suggestions{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    margin-top:3px;
+    font-size:13px;
+}
+.suggestions div{
+    padding:8px 12px;
+    cursor:pointer;
+}
+.suggestions div:hover{background:#eef2ff}
+
+/* ---------- TABLE ---------- */
+.table-wrap{
+    margin-top:12px;
+    background:var(--panel-2);
+    border-radius:8px;
+    overflow:hidden;
+    border:1px solid var(--border);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+th,td{
+    padding:8px 10px;
+    font-size:12.5px;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    line-height:1.25;
+}
+
+th{
+    background:#f3f4f6;
+    cursor:pointer;
+    color:var(--muted);
+    position:sticky;
+    top:0;
+    z-index:1;
+}
+
+tbody tr:hover{background:#f1f5f9}
+
+/* ---------- COMPANY COLUMN ---------- */
+th.company,td.company{
+    text-align:left;
+    width:200px;
+    max-width:200px;
+    white-space:normal;
+    word-break:break-word;
+}
+
+/* ---------- TEXT ---------- */
+.symbol{
+    color:var(--blue);
+    cursor:pointer;
+    font-weight:500;
+}
+.remove{
+    color:var(--red);
+    cursor:pointer;
+    font-size:16px;
+}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.sort{font-size:10px;margin-left:4px;opacity:.5}
+
+/* ---------- FLASH ---------- */
+.price.up{animation:pUp .35s}
+.price.down{animation:pDown .35s}
+.volume.up{animation:vUp .35s}
+
+@keyframes pUp{from{background:#dcfce7}to{background:transparent}}
+@keyframes pDown{from{background:#fee2e2}to{background:transparent}}
+@keyframes vUp{from{background:#e0e7ff}to{background:transparent}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Nexus Asset Management</h1>
+
+<div class="tabs" id="tabs"></div>
+
+<input id="searchBox" placeholder="Type company name" oninput="searchStocks()">
+<div class="suggestions" id="suggestions"></div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th class="company" onclick="setSort('company')">Company<span class="sort">⇅</span></th>
+<th onclick="setSort('symbol')">Symbol<span class="sort">⇅</span></th>
+<th onclick="setSort('ltp')">Price<span class="sort">⇅</span></th>
+<th onclick="setSort('volume')">Vol<span class="sort">⇅</span></th>
+<th onclick="setSort('per')">%<span class="sort">⇅</span></th>
+<th onclick="setSort('open')">O<span class="sort">⇅</span></th>
+<th onclick="setSort('high')">H<span class="sort">⇅</span></th>
+<th onclick="setSort('low')">L<span class="sort">⇅</span></th>
+<th onclick="setSort('close')">C<span class="sort">⇅</span></th>
+<th>✖</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+const tabs={{ tabs|tojson }};
+const tabsDiv=document.getElementById("tabs");
+const rows=document.getElementById("rows");
+const searchBox=document.getElementById("searchBox");
+const suggestions=document.getElementById("suggestions");
+
+let dataCache=[], prevPrices={}, prevVolumes={};
+let currentSort=null, sortAsc=true;
+
+/* ---------- TABS ---------- */
+tabs.forEach((t,i)=>{
+    const d=document.createElement("div");
+    d.className="tab"+(i===0?" active":"");
+    d.innerText=t;
+    d.onclick=()=>switchTab(t,d);
+    tabsDiv.appendChild(d);
+});
+function switchTab(tab,el){
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    el.classList.add("active");
+    fetch("/set_tab",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({tab})});
+}
+
+/* ---------- SEARCH ---------- */
+function searchStocks(){
+    const q=searchBox.value.trim();
+    if(q.length<2){suggestions.innerHTML="";return}
+    fetch(`/search?q=${encodeURIComponent(q)}`)
+    .then(r=>r.json())
+    .then(d=>{
+        suggestions.innerHTML=d.map(s=>`
+            <div onclick='addStock(${JSON.stringify(s)})'>${s.trading_symbol}</div>
+        `).join("");
+    });
+}
+function addStock(obj){
+    fetch("/add",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+    searchBox.value="";
+    suggestions.innerHTML="";
+}
+
+/* ---------- SORT ---------- */
+function setSort(k){
+    if(currentSort===k) sortAsc=!sortAsc;
+    else{currentSort=k;sortAsc=true}
+    applySort(); render();
+}
+function applySort(){
+    if(!currentSort) return;
+    dataCache.sort((a,b)=>{
+        let x,y;
+        switch(currentSort){
+            case"company":x=a.company_name;y=b.company_name;break;
+            case"symbol":x=a.trading_symbol;y=b.trading_symbol;break;
+            case"ltp":x=+a.ltp;y=+b.ltp;break;
+            case"per":x=+a.per_change;y=+b.per_change;break;
+            case"open":x=+a.ohlc.open;y=b.ohlc.open;break;
+            case"high":x=+a.ohlc.high;y=b.ohlc.high;break;
+            case"low":x=+a.ohlc.low;y=b.ohlc.low;break;
+            case"close":x=+a.ohlc.close;y=b.ohlc.close;break;
+            case"volume":x=+a.last_volume;y=b.last_volume;break;
+        }
+        return sortAsc?(x>y?1:-1):(x<y?1:-1);
+    });
+}
+
+/* ---------- HELPERS ---------- */
+function f2(x){return Number(x).toFixed(2)}
+function fmtVol(v){
+    v=+v;
+    if(v>=1e9) return (v/1e9).toFixed(2)+"B";
+    if(v>=1e6) return (v/1e6).toFixed(2)+"M";
+    if(v>=1e3) return (v/1e3).toFixed(2)+"K";
+    return v;
+}
+
+/* ---------- TABLE ---------- */
+function render(){
+rows.innerHTML=dataCache.map(s=>{
+const key=s.exchange+"|"+s.exchange_token;
+
+let pCls="", vCls="";
+if(prevPrices[key]!=null){
+    if(+s.ltp>prevPrices[key]) pCls="up";
+    else if(+s.ltp<prevPrices[key]) pCls="down";
+}
+if(prevVolumes[key]!=null && +s.last_volume>prevVolumes[key]) vCls="up";
+
+prevPrices[key]=+s.ltp;
+prevVolumes[key]=+s.last_volume;
+
+let c=+s.per_change;
+return `
+<tr>
+<td class="company">${s.company_name}</td>
+<td class="symbol" onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${s.trading_symbol.replace('-EQ','')}')">${s.trading_symbol}</td>
+<td class="price ${pCls}">${f2(s.ltp)}</td>
+<td class="volume ${vCls}">${fmtVol(s.last_volume)}</td>
+<td class="${c>=0?'pos':'neg'}">${f2(c)}%</td>
+<td>${f2(s.ohlc.open)}</td>
+<td>${f2(s.ohlc.high)}</td>
+<td>${f2(s.ohlc.low)}</td>
+<td>${f2(s.ohlc.close)}</td>
+<td class="remove" onclick="fetch('/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:key})})">✖</td>
+</tr>`;
+}).join("");
+}
+
+/* ---------- REFRESH ---------- */
+function refresh(){
+fetch("/prices").then(r=>r.json()).then(d=>{
+    dataCache=d;
+    applySort();
+    render();
+});
+}
+setInterval(refresh,5000);
+</script>
+
+</body>
+</html>

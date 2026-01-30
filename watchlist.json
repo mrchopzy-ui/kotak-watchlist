@@ -1,0 +1,90 @@
+{
+  "watchlists": {
+    "Bluechip": [
+      {
+        "company_name": "Billionbrains Garage Ventures Limited",
+        "symbol": "nse_cm|759806",
+        "trading_symbol": "GROWW-EQ"
+      },
+      {
+        "company_name": "Rain Industries Limited",
+        "symbol": "nse_cm|15337",
+        "trading_symbol": "RAIN-EQ"
+      },
+      {
+        "company_name": "Hindalco Industries Limited",
+        "symbol": "nse_cm|1363",
+        "trading_symbol": "HINDALCO-EQ"
+      },
+      {
+        "company_name": "Redtape Limited",
+        "symbol": "nse_cm|17859",
+        "trading_symbol": "REDTAPE-EQ"
+      },
+      {
+        "company_name": "Jsw Steel Limited",
+        "symbol": "nse_cm|11723",
+        "trading_symbol": "JSWSTEEL-EQ"
+      },
+      {
+        "company_name": "Kotak Mahindra Bank Limited",
+        "symbol": "nse_cm|1922",
+        "trading_symbol": "KOTAKBANK-EQ"
+      },
+      {
+        "company_name": "City Union Bank Limited",
+        "symbol": "nse_cm|5701",
+        "trading_symbol": "CUB-EQ"
+      },
+      {
+        "company_name": "Ashapura Minechem Limited",
+        "symbol": "nse_cm|203",
+        "trading_symbol": "ASHAPURMIN-EQ"
+      }
+    ],
+    "Short term": [
+      {
+        "company_name": "Knr Constructions Limited",
+        "symbol": "nse_cm|15283",
+        "trading_symbol": "KNRCON-EQ"
+      },
+      {
+        "company_name": "Omaxe Limited",
+        "symbol": "nse_cm|14853",
+        "trading_symbol": "OMAXE-EQ"
+      },
+      {
+        "company_name": "Voltas Limited",
+        "symbol": "nse_cm|3718",
+        "trading_symbol": "VOLTAS-EQ"
+      }
+    ],
+    "Intraday": [
+      {
+        "company_name": "Dlf Limited",
+        "symbol": "nse_cm|14732",
+        "trading_symbol": "DLF-EQ"
+      },
+      {
+        "company_name": "Jain Resource Recycling Limited",
+        "symbol": "nse_cm|759244",
+        "trading_symbol": "JAINREC-EQ"
+      },
+      {
+        "company_name": "Tera Software Limited",
+        "symbol": "nse_cm|19292",
+        "trading_symbol": "TERASOFT-EQ"
+      },
+      {
+        "company_name": "Gail (India) Limited",
+        "symbol": "nse_cm|4717",
+        "trading_symbol": "GAIL-EQ"
+      }
+    ]
+  },
+  "tab_order": [
+    "Short term",
+    "Intraday",
+    "Bluechip"
+  ]
+}
