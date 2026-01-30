@@ -9,11 +9,14 @@ app = Flask(__name__)
 # ======================================================
 # 🔐 ENVIRONMENT VARIABLES
 # ======================================================
-ACCESS_TOKEN = os.environ["KOTAK_ACCESS_TOKEN"]
-MOBILE = os.environ["KOTAK_MOBILE"]
-USER_ID = os.environ["KOTAK_USER_ID"]
-MPIN = os.environ["KOTAK_MPIN"]
-TOTP_SECRET = os.environ["KOTAK_TOTP_SECRET"]
+ACCESS_TOKEN = os.environ.get("KOTAK_ACCESS_TOKEN")
+MOBILE = os.environ.get("KOTAK_MOBILE")
+USER_ID = os.environ.get("KOTAK_USER_ID")
+MPIN = os.environ.get("KOTAK_MPIN")
+TOTP_SECRET = os.environ.get("KOTAK_TOTP_SECRET")
+
+if not all([ACCESS_TOKEN, MOBILE, USER_ID, MPIN, TOTP_SECRET]):
+    raise RuntimeError("❌ Missing Kotak environment variables")
 
 # ======================================================
 # 🌐 GLOBAL STATE
@@ -30,7 +33,6 @@ WATCHLISTS = {
 ACTIVE_TAB = "Watchlist 1"
 
 SCRIP_MASTER = []
-INITIALIZED = False   # 🔴 IMPORTANT FLAG
 
 
 # ======================================================
@@ -52,8 +54,11 @@ def login():
             "mobileNumber": MOBILE,
             "ucc": USER_ID,
             "totp": totp
-        }
-    ).json()
+        },
+        timeout=10
+    )
+    r1.raise_for_status()
+    r1 = r1.json()
 
     view_token = r1["data"]["token"]
     view_sid = r1["data"]["sid"]
@@ -67,8 +72,11 @@ def login():
             "Auth": view_token,
             "Content-Type": "application/json"
         },
-        json={"mpin": MPIN}
-    ).json()
+        json={"mpin": MPIN},
+        timeout=10
+    )
+    r2.raise_for_status()
+    r2 = r2.json()
 
     BASE_URL = r2["data"]["baseUrl"]
     SESSION_TOKEN = r2["data"]["token"]
@@ -83,40 +91,47 @@ def load_scrip_master():
 
     r = requests.get(
         f"{BASE_URL}/script-details/1.0/masterscrip/file-paths",
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
+        headers={"Authorization": ACCESS_TOKEN},
+        timeout=10
+    )
+    r.raise_for_status()
+    r = r.json()
 
-    nse_file = [x for x in r["data"]["filesPaths"] if "nse_cm" in x][0]
-    csv_text = requests.get(nse_file).text.splitlines()
+    nse_file = next(
+        f for f in r["data"]["filesPaths"]
+        if "nse_cm" in f and "cm-v1" in f
+    )
 
+    csv_text = requests.get(nse_file, timeout=20).text.splitlines()
     reader = csv.DictReader(csv_text)
+
     for row in reader:
         if row.get("series") == "EQ":
             SCRIP_MASTER.append({
                 "exchange": "nse_cm",
                 "exchange_token": row["pSymbol"],
                 "trading_symbol": row["pTrdSymbol"],
-                "company_name": row.get("name", row["pTrdSymbol"])
+                "company_name": row.get("name") or row.get("symbol") or row["pTrdSymbol"]
             })
 
-
-# ======================================================
-# 🚀 INITIALIZE APP (RUNS UNDER GUNICORN)
-# ======================================================
-@app.before_request
-def initialize_once():
-    global INITIALIZED
-    if not INITIALIZED:
-        print("🔐 Logging in to Kotak...")
-        login()
-        print("📂 Loading scrip master...")
-        load_scrip_master()
-        print(f"✅ Loaded {len(SCRIP_MASTER)} EQ stocks")
-        INITIALIZED = True
+    if not SCRIP_MASTER:
+        raise RuntimeError("❌ Scrip master loaded ZERO stocks")
 
 
 # ======================================================
-# 🔍 SEARCH (SYMBOL + COMPANY)
+# 🚀 FORCE INITIALIZATION (CRITICAL)
+# ======================================================
+print("🔐 Logging in to Kotak...")
+login()
+
+print("📂 Loading NSE EQ scrip master...")
+load_scrip_master()
+
+print(f"✅ Loaded {len(SCRIP_MASTER)} EQ stocks")
+
+
+# ======================================================
+# 🔍 SEARCH
 # ======================================================
 @app.route("/search")
 def search():
@@ -124,12 +139,11 @@ def search():
     if not q:
         return jsonify([])
 
-    results = []
-    for s in SCRIP_MASTER:
-        if q in s["trading_symbol"].lower() or q in s["company_name"].lower():
-            results.append(s)
-
-    return jsonify(results[:10])
+    return jsonify([
+        s for s in SCRIP_MASTER
+        if q in s["trading_symbol"].lower()
+        or q in s["company_name"].lower()
+    ][:10])
 
 
 # ======================================================
