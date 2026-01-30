@@ -1,0 +1,52 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+.search-box {
+    position: relative;
+    width: 300px;
+}
+
+#search {
+    width: 100%;
+    padding: 8px;
+}
+
+#addBtn {
+    margin-top: 8px;
+    width: 100%;
+}
+
+#suggestions {
+    border: 1px solid #ccc;
+    position: absolute;
+    background: #fff;
+    width: 100%;
+    z-index: 10;
+}
+
+#suggestions div {
+    padding: 6px;
+    cursor: pointer;
+}
+
+#suggestions div:hover {
+    background: #eee;
+}
+
+table {
+    margin-top: 30px;
+    border-collapse: collapse;
+    width: 60%;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
