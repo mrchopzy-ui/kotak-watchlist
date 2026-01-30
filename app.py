@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 
 # ======================================================
-# 🔐 ENVIRONMENT VARIABLES (FROM RENDER)
+# 🔐 ENVIRONMENT VARIABLES
 # ======================================================
 ACCESS_TOKEN = os.environ["KOTAK_ACCESS_TOKEN"]
 MOBILE = os.environ["KOTAK_MOBILE"]
@@ -30,6 +30,7 @@ WATCHLISTS = {
 ACTIVE_TAB = "Watchlist 1"
 
 SCRIP_MASTER = []
+INITIALIZED = False   # 🔴 IMPORTANT FLAG
 
 
 # ======================================================
@@ -97,6 +98,21 @@ def load_scrip_master():
                 "trading_symbol": row["pTrdSymbol"],
                 "company_name": row.get("name", row["pTrdSymbol"])
             })
+
+
+# ======================================================
+# 🚀 INITIALIZE APP (RUNS UNDER GUNICORN)
+# ======================================================
+@app.before_request
+def initialize_once():
+    global INITIALIZED
+    if not INITIALIZED:
+        print("🔐 Logging in to Kotak...")
+        login()
+        print("📂 Loading scrip master...")
+        load_scrip_master()
+        print(f"✅ Loaded {len(SCRIP_MASTER)} EQ stocks")
+        INITIALIZED = True
 
 
 # ======================================================
@@ -176,14 +192,3 @@ def prices():
 @app.route("/")
 def index():
     return render_template("index.html")
-
-
-# ======================================================
-# 🚀 START
-# ======================================================
-if __name__ == "__main__":
-    print("Logging in...")
-    login()
-    print("Loading scrip master...")
-    load_scrip_master()
-    app.run(host="0.0.0.0", port=5000)
