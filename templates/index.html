@@ -12,9 +12,12 @@
 
 <div class="tabs">
     {% for t in tabs %}
-        <button class="tab {{ 'active' if t == active else '' }}" onclick="switchTab('{{ t }}')">{{ t }}</button>
+        <button class="tab {{ 'active' if t == active else '' }}"
+                onclick="switchTab('{{ t }}')">
+            {{ t }}
+        </button>
     {% endfor %}
-    <button class="tab" onclick="createTab()">＋</button>
+    <button class="tab add-tab" onclick="createTab()">＋</button>
 </div>
 
 <div class="search-box">
@@ -27,6 +30,12 @@
         <tr>
             <th>Symbol</th>
             <th>Company</th>
+            <th>LTP</th>
+            <th>%</th>
+            <th>O</th>
+            <th>H</th>
+            <th>L</th>
+            <th>C</th>
             <th>Supertrend (15min)</th>
             <th>Delete</th>
         </tr>
