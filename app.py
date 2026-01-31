@@ -1,117 +1,32 @@
-import os
-import csv
-import requests
-from flask import Flask, render_template, request, jsonify
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
-app = Flask(__name__)
+<h1>Nexus Asset Management</h1>
 
-# =====================
-# ENV VAR
-# =====================
-ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
+<div class="search-box">
+    <input id="search" placeholder="Type stock symbol" autocomplete="off">
+    <button id="addBtn" disabled>Add</button>
+    <div id="suggestions"></div>
+</div>
 
-# =====================
-# GLOBAL STATE
-# =====================
-WATCHLIST = []
-SCRIP_MASTER = []
+<table>
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Company</th>
+            <th>LTP</th>
+            <th>% Change</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody id="watchlist"></tbody>
+</table>
 
-# =====================
-# LOAD LOCAL SCRIP MASTER
-# =====================
-def load_scrip_master():
-    path = os.path.join("data", "nse_eq_scrip_master.csv")
-    with open(path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            SCRIP_MASTER.append({
-                "exchange": "nse_cm",
-                "exchange_token": r["exchange_token"],
-                "trading_symbol": r["trading_symbol"],
-                "company_name": r["company_name"]
-            })
-
-load_scrip_master()
-
-# =====================
-# ROUTES
-# =====================
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/search")
-def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([
-        s for s in SCRIP_MASTER
-        if q in s["trading_symbol"].lower()
-    ][:10])
-
-@app.route("/add", methods=["POST"])
-def add():
-    stock = request.json
-    if stock and stock not in WATCHLIST:
-        WATCHLIST.append(stock)
-    return jsonify(WATCHLIST)
-
-@app.route("/remove", methods=["POST"])
-def remove():
-    symbol = request.json["trading_symbol"]
-    global WATCHLIST
-    WATCHLIST = [s for s in WATCHLIST if s["trading_symbol"] != symbol]
-    return jsonify(WATCHLIST)
-
-@app.route("/prices")
-def prices():
-    if not WATCHLIST:
-        return jsonify([])
-
-    query = ",".join(
-        f"nse_cm|{s['exchange_token']}" for s in WATCHLIST
-    )
-
-    url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{query}/all"
-
-    try:
-        resp = requests.get(
-            url,
-            headers={"Authorization": ACCESS_TOKEN},
-            timeout=5
-        ).json()
-    except Exception:
-        return jsonify([])
-
-    # ---- NORMALIZE RESPONSE ----
-    if isinstance(resp, dict) and "data" in resp:
-        quotes = resp["data"]
-    elif isinstance(resp, list):
-        quotes = resp
-    else:
-        return jsonify([])
-
-    if isinstance(quotes, dict):
-        quotes = [quotes]
-
-    result = []
-
-    for stock, q in zip(WATCHLIST, quotes):
-        try:
-            ltp = float(q.get("ltp", 0))
-            change = float(q.get("change", 0))
-            prev = ltp - change
-            pct = (change / prev * 100) if prev else 0
-
-            result.append({
-                "symbol": stock["trading_symbol"],
-                "company": stock["company_name"],
-                "ltp": round(ltp, 2),
-                "change_pct": round(pct, 2)
-            })
-        except Exception:
-            continue
-
-    return jsonify(result)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+<script src="/static/app.js"></script>
+</body>
+</html>
