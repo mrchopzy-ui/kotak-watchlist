@@ -8,7 +8,16 @@
 
 <h1>Nexus Asset Management</h1>
 
-<div id="tabs"></div>
+<div class="tabs">
+    {% for t in tabs %}
+        <button
+            class="tab {{ 'active' if t == active else '' }}"
+            onclick="switchTab('{{ t }}')">
+            {{ t }}
+        </button>
+    {% endfor %}
+    <button onclick="createTab()">＋</button>
+</div>
 
 <div class="search-box">
     <input id="search" placeholder="Type stock symbol">
