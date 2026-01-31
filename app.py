@@ -2,7 +2,6 @@ import os
 import csv
 import json
 import requests
-import pandas as pd
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -34,7 +33,8 @@ ACTIVE_TAB = list(WATCHLISTS.keys())[0]
 SCRIP_MASTER = []
 
 def load_scrip_master():
-    with open(os.path.join(DATA_DIR, "nse_eq_scrip_master.csv"), newline="", encoding="utf-8") as f:
+    path = os.path.join(DATA_DIR, "nse_eq_scrip_master.csv")
+    with open(path, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             SCRIP_MASTER.append({
                 "exchange": "nse_cm",
@@ -46,36 +46,43 @@ def load_scrip_master():
 load_scrip_master()
 
 # =====================
-# SUPER TREND LOGIC
+# SUPER TREND (PURE PYTHON)
 # =====================
-def calculate_supertrend(df, period=10, multiplier=3):
-    df["H-L"] = abs(df["high"] - df["low"])
-    df["H-PC"] = abs(df["high"] - df["close"].shift())
-    df["L-PC"] = abs(df["low"] - df["close"].shift())
-    df["TR"] = df[["H-L", "H-PC", "L-PC"]].max(axis=1)
-    df["ATR"] = df["TR"].rolling(period).mean()
+def supertrend_signal(candles, period=10, multiplier=3):
+    if len(candles) < period + 1:
+        return "Sell"
 
-    hl2 = (df["high"] + df["low"]) / 2
-    df["upper"] = hl2 + multiplier * df["ATR"]
-    df["lower"] = hl2 - multiplier * df["ATR"]
+    trs = []
+    for i in range(1, len(candles)):
+        high = candles[i]["high"]
+        low = candles[i]["low"]
+        prev_close = candles[i-1]["close"]
+        tr = max(
+            high - low,
+            abs(high - prev_close),
+            abs(low - prev_close)
+        )
+        trs.append(tr)
 
-    df["supertrend"] = True
-    for i in range(1, len(df)):
-        if df["close"][i] > df["upper"][i-1]:
-            df.at[i, "supertrend"] = True
-        elif df["close"][i] < df["lower"][i-1]:
-            df.at[i, "supertrend"] = False
-        else:
-            df.at[i, "supertrend"] = df["supertrend"][i-1]
+    atr = sum(trs[-period:]) / period
 
-    return "Buy" if df["supertrend"].iloc[-1] else "Sell"
+    last = candles[-1]
+    hl2 = (last["high"] + last["low"]) / 2
+    upper = hl2 + multiplier * atr
+    lower = hl2 - multiplier * atr
+
+    return "Buy" if last["close"] > upper else "Sell"
 
 # =====================
 # ROUTES
 # =====================
 @app.route("/")
 def index():
-    return render_template("index.html", tabs=WATCHLISTS.keys(), active=ACTIVE_TAB)
+    return render_template(
+        "index.html",
+        tabs=WATCHLISTS.keys(),
+        active=ACTIVE_TAB
+    )
 
 @app.route("/set-tab", methods=["POST"])
 def set_tab():
@@ -94,7 +101,10 @@ def new_tab():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIP_MASTER if q in s["trading_symbol"].lower()][:10])
+    return jsonify([
+        s for s in SCRIP_MASTER
+        if q in s["trading_symbol"].lower()
+    ][:10])
 
 @app.route("/add", methods=["POST"])
 def add():
@@ -107,7 +117,10 @@ def add():
 @app.route("/remove", methods=["POST"])
 def remove():
     symbol = request.json["trading_symbol"]
-    WATCHLISTS[ACTIVE_TAB] = [s for s in WATCHLISTS[ACTIVE_TAB] if s["trading_symbol"] != symbol]
+    WATCHLISTS[ACTIVE_TAB] = [
+        s for s in WATCHLISTS[ACTIVE_TAB]
+        if s["trading_symbol"] != symbol
+    ]
     save_watchlists()
     return jsonify(WATCHLISTS[ACTIVE_TAB])
 
@@ -118,15 +131,30 @@ def prices():
         return jsonify([])
 
     out = []
+
     for s in wl:
-        # 🔴 Kotak Intraday Candle API (15 min)
-        url = f"https://mis.kotaksecurities.com/script-details/1.0/ohlc/{s['exchange']}|{s['exchange_token']}/15minute"
-        candles = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+        url = (
+            f"https://mis.kotaksecurities.com/"
+            f"script-details/1.0/ohlc/"
+            f"{s['exchange']}|{s['exchange_token']}/15minute"
+        )
 
-        df = pd.DataFrame(candles["data"])
-        df.columns = ["time", "open", "high", "low", "close", "volume"]
+        r = requests.get(
+            url,
+            headers={"Authorization": ACCESS_TOKEN},
+            timeout=5
+        ).json()
 
-        signal = calculate_supertrend(df)
+        candles = []
+        for c in r.get("data", []):
+            candles.append({
+                "open": float(c[1]),
+                "high": float(c[2]),
+                "low": float(c[3]),
+                "close": float(c[4])
+            })
+
+        signal = supertrend_signal(candles)
 
         out.append({
             "symbol": s["trading_symbol"],
