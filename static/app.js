@@ -40,6 +40,14 @@ addBtn.onclick = async () => {
     loadPrices();
 };
 
+function openChart(symbol) {
+    const tvSymbol = `NSE:${symbol.replace("-EQ", "")}`;
+    window.open(
+        `https://www.tradingview.com/chart/?symbol=${tvSymbol}`,
+        "_blank"
+    );
+}
+
 async function loadPrices() {
     const res = await fetch("/prices");
     const data = await res.json();
@@ -47,15 +55,21 @@ async function loadPrices() {
 
     data.forEach(s => {
         const tr = document.createElement("tr");
+
         tr.innerHTML = `
-            <td>${s.symbol}</td>
+            <td class="link" onclick="openChart('${s.symbol}')">
+                ${s.symbol}
+            </td>
             <td>${s.company}</td>
             <td>${s.ltp}</td>
             <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
                 ${s.change_pct}%
             </td>
-            <td><button onclick="removeStock('${s.symbol}')">❌</button></td>
+            <td>
+                <button onclick="removeStock('${s.symbol}')">❌</button>
+            </td>
         `;
+
         watchlistBody.appendChild(tr);
     });
 }
