@@ -46,18 +46,6 @@ def load_scrip_master():
 load_scrip_master()
 
 # =====================
-# SIMPLE SUPERTRAND LOGIC (15-MIN PROXY)
-# =====================
-def supertrend_signal(ltp, open_p, high, low):
-    midpoint = (high + low) / 2
-
-    if ltp > midpoint and ltp > open_p:
-        return "BUY"
-    elif ltp < midpoint and ltp < open_p:
-        return "SELL"
-    return "NEUTRAL"
-
-# =====================
 # ROUTES
 # =====================
 @app.route("/")
@@ -118,33 +106,26 @@ def prices():
     url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{query}/all"
 
     r = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+
     quotes = r["data"] if isinstance(r, dict) else r
     if isinstance(quotes, dict):
         quotes = [quotes]
 
     out = []
-
     for stock, q in zip(wl, quotes):
         ohlc = q.get("ohlc", {})
-        ltp = float(q.get("ltp", 0))
-        open_p = float(ohlc.get("open", 0))
-        high = float(ohlc.get("high", 0))
-        low = float(ohlc.get("low", 0))
-        close = float(ohlc.get("close", 1))
+        prev = float(ohlc.get("close", 1))
         change = float(q.get("change", 0))
-
-        signal = supertrend_signal(ltp, open_p, high, low)
 
         out.append({
             "symbol": stock["trading_symbol"],
             "company": stock["company_name"],
-            "ltp": round(ltp, 2),
-            "change_pct": round((change / close) * 100, 2),
-            "open": round(open_p, 2),
-            "high": round(high, 2),
-            "low": round(low, 2),
-            "close": round(close, 2),
-            "supertrend": signal
+            "ltp": round(float(q.get("ltp", 0)), 2),
+            "change_pct": round((change / prev) * 100, 2),
+            "open": round(float(ohlc.get("open", 0)), 2),
+            "high": round(float(ohlc.get("high", 0)), 2),
+            "low": round(float(ohlc.get("low", 0)), 2),
+            "close": round(prev, 2)
         })
 
     return jsonify(out)
