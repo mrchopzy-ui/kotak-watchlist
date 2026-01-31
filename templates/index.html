@@ -10,9 +10,8 @@
 
 <div class="tabs">
     {% for t in tabs %}
-        <button
-            class="tab {{ 'active' if t == active else '' }}"
-            onclick="switchTab('{{ t }}')">
+        <button class="tab {{ 'active' if t == active else '' }}"
+                onclick="switchTab('{{ t }}')">
             {{ t }}
         </button>
     {% endfor %}
