@@ -51,5 +51,15 @@ th, td {
     text-align: center;
 }
 
+.link {
+    cursor: pointer;
+    color: #0066cc;
+    font-weight: bold;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
 .green { color: green; }
 .red { color: red; }
