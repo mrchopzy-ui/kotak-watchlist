@@ -1,33 +1,18 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 40px;
+body { font-family: Arial; margin: 30px; }
+h1 { margin-bottom: 10px; }
+
+#tabs button {
+    margin-right: 6px;
+    padding: 6px 10px;
 }
 
-h1 {
-    margin-bottom: 20px;
-}
-
-.search-box {
-    position: relative;
-    width: 280px;
-}
-
-#search {
-    width: 100%;
-    padding: 8px;
-}
-
-#addBtn {
-    margin-top: 6px;
-    width: 100%;
-}
+.search-box { position: relative; width: 260px; }
 
 #suggestions {
     position: absolute;
-    background: white;
+    background: #fff;
     border: 1px solid #ccc;
     width: 100%;
-    z-index: 10;
 }
 
 #suggestions div {
@@ -35,15 +20,10 @@ h1 {
     cursor: pointer;
 }
 
-#suggestions div:hover {
-    background: #eee;
-}
-
 table {
-    margin-top: 30px;
+    margin-top: 20px;
     border-collapse: collapse;
     width: 100%;
-    font-size: 14px;
 }
 
 th, td {
@@ -52,15 +32,6 @@ th, td {
     text-align: center;
 }
 
-.link {
-    cursor: pointer;
-    color: #0066cc;
-    font-weight: bold;
-}
-
-.link:hover {
-    text-decoration: underline;
-}
-
+.link { color: #0066cc; cursor: pointer; font-weight: bold; }
 .green { color: green; }
 .red { color: red; }
