@@ -9,7 +9,7 @@ h1 {
 
 .search-box {
     position: relative;
-    width: 300px;
+    width: 280px;
 }
 
 #search {
@@ -18,14 +18,14 @@ h1 {
 }
 
 #addBtn {
-    margin-top: 8px;
+    margin-top: 6px;
     width: 100%;
 }
 
 #suggestions {
-    border: 1px solid #ccc;
     position: absolute;
-    background: #fff;
+    background: white;
+    border: 1px solid #ccc;
     width: 100%;
     z-index: 10;
 }
@@ -42,7 +42,7 @@ h1 {
 table {
     margin-top: 30px;
     border-collapse: collapse;
-    width: 60%;
+    width: 80%;
 }
 
 th, td {
@@ -50,3 +50,6 @@ th, td {
     padding: 8px;
     text-align: center;
 }
+
+.green { color: green; }
+.red { color: red; }
