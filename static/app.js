@@ -1,11 +1,32 @@
+let activeTab = "";
 let selectedStock = null;
 
-const searchInput = document.getElementById("search");
-const suggestionsDiv = document.getElementById("suggestions");
-const addBtn = document.getElementById("addBtn");
+const tabsDiv = document.getElementById("tabs");
 const watchlistBody = document.getElementById("watchlist");
+const searchInput = document.getElementById("search");
+const addBtn = document.getElementById("addBtn");
+const suggestionsDiv = document.getElementById("suggestions");
 
-searchInput.addEventListener("input", async () => {
+async function loadTabs() {
+    const res = await fetch("/tabs");
+    const tabs = await res.json();
+    tabsDiv.innerHTML = "";
+
+    tabs.forEach((t, i) => {
+        const b = document.createElement("button");
+        b.textContent = t;
+        b.onclick = () => switchTab(t);
+        if (i === 0) switchTab(t);
+        tabsDiv.appendChild(b);
+    });
+}
+
+function switchTab(tab) {
+    activeTab = tab;
+    loadPrices();
+}
+
+searchInput.oninput = async () => {
     const q = searchInput.value.trim();
     suggestionsDiv.innerHTML = "";
     selectedStock = null;
@@ -16,56 +37,48 @@ searchInput.addEventListener("input", async () => {
     const res = await fetch(`/search?q=${q}`);
     const data = await res.json();
 
-    data.forEach(stock => {
-        const div = document.createElement("div");
-        div.textContent = stock.trading_symbol;
-        div.onclick = () => {
-            selectedStock = stock;
-            searchInput.value = stock.trading_symbol;
+    data.forEach(s => {
+        const d = document.createElement("div");
+        d.textContent = s.trading_symbol;
+        d.onclick = () => {
+            selectedStock = s;
+            searchInput.value = s.trading_symbol;
             suggestionsDiv.innerHTML = "";
             addBtn.disabled = false;
         };
-        suggestionsDiv.appendChild(div);
+        suggestionsDiv.appendChild(d);
     });
-});
+};
 
 addBtn.onclick = async () => {
     await fetch("/add", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(selectedStock)
+        body: JSON.stringify({tab: activeTab, stock: selectedStock})
     });
     searchInput.value = "";
     addBtn.disabled = true;
     loadPrices();
 };
 
-function openChart(symbol) {
-    const tvSymbol = `NSE:${symbol.replace("-EQ", "")}`;
-    window.open(`https://www.tradingview.com/chart/?symbol=${tvSymbol}`, "_blank");
-}
-
 async function loadPrices() {
-    const res = await fetch("/prices");
+    const res = await fetch(`/prices/${activeTab}`);
     const data = await res.json();
     watchlistBody.innerHTML = "";
 
     data.forEach(s => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td class="link" onclick="openChart('${s.symbol}')">${s.symbol}</td>
+        watchlistBody.innerHTML += `
+        <tr>
+            <td onclick="openChart('${s.symbol}')" class="link">${s.symbol}</td>
             <td>${s.company}</td>
             <td>${s.ltp}</td>
-            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">${s.change_pct}%</td>
+            <td class="${s.change_pct>=0?'green':'red'}">${s.change_pct}%</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td><button onclick="removeStock('${s.symbol}')">❌</button></td>
-        `;
-
-        watchlistBody.appendChild(tr);
+        </tr>`;
     });
 }
 
@@ -73,10 +86,14 @@ async function removeStock(symbol) {
     await fetch("/remove", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({trading_symbol: symbol})
+        body: JSON.stringify({tab: activeTab, symbol})
     });
     loadPrices();
 }
 
+function openChart(sym) {
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym.replace("-EQ","")}`, "_blank");
+}
+
 setInterval(loadPrices, 5000);
-loadPrices();
+loadTabs();
