@@ -2,42 +2,40 @@ let selectedStock = null;
 
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
-const addBtn = document.getElementById("addBtn");
 const tbody = document.getElementById("watchlist");
 
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     selectedStock = null;
-    addBtn.disabled = true;
 
     if (!search.value) return;
 
     const res = await fetch(`/search?q=${search.value}`);
     const data = await res.json();
 
-    data.forEach(s => {
-        const d = document.createElement("div");
-        d.textContent = s.trading_symbol;
-        d.onclick = () => {
-            selectedStock = s;
-            search.value = s.trading_symbol;
+    data.forEach(stock => {
+        const div = document.createElement("div");
+        div.className = "suggestion-item";
+        div.innerHTML = `
+            <strong>${stock.trading_symbol}</strong>
+            <span>${stock.company_name}</span>
+        `;
+
+        div.onclick = async () => {
+            await fetch("/add", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(stock)
+            });
+
+            search.value = "";
             suggestions.innerHTML = "";
-            addBtn.disabled = false;
+            loadPrices();
         };
-        suggestions.appendChild(d);
+
+        suggestions.appendChild(div);
     });
 });
-
-addBtn.onclick = async () => {
-    await fetch("/add", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(selectedStock)
-    });
-    search.value = "";
-    addBtn.disabled = true;
-    loadPrices();
-};
 
 function switchTab(tab) {
     fetch("/set-tab", {
@@ -48,8 +46,9 @@ function switchTab(tab) {
 }
 
 function createTab() {
-    const name = prompt("Watchlist name:");
+    const name = prompt("New watchlist name:");
     if (!name) return;
+
     fetch("/new-tab", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -57,9 +56,9 @@ function createTab() {
     }).then(() => location.reload());
 }
 
-function openChart(sym) {
+function openChart(symbol) {
     window.open(
-        `https://www.tradingview.com/chart/?symbol=NSE:${sym.replace("-EQ","")}`,
+        `https://www.tradingview.com/chart/?symbol=NSE:${symbol.replace("-EQ","")}`,
         "_blank"
     );
 }
@@ -73,14 +72,14 @@ async function loadPrices() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td class="link" onclick="openChart('${s.symbol}')">${s.symbol}</td>
-            <td>${s.company}</td>
+            <td class="company">${s.company}</td>
             <td>${s.ltp}</td>
-            <td class="${s.change_pct>=0?'green':'red'}">${s.change_pct}%</td>
+            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">${s.change_pct}%</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
-            <td><button onclick="removeStock('${s.symbol}')">❌</button></td>
+            <td><button class="delete" onclick="removeStock('${s.symbol}')">✕</button></td>
         `;
         tbody.appendChild(tr);
     });
