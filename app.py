@@ -82,7 +82,7 @@ def prices():
     except Exception:
         return jsonify([])
 
-    # ---- NORMALIZE RESPONSE ----
+    # Normalize response
     if isinstance(resp, dict) and "data" in resp:
         quotes = resp["data"]
     elif isinstance(resp, list):
@@ -99,14 +99,22 @@ def prices():
         try:
             ltp = float(q.get("ltp", 0))
             change = float(q.get("change", 0))
-            prev = ltp - change
-            pct = (change / prev * 100) if prev else 0
+            prev_close = float(q.get("ohlc", {}).get("close", 0))
+            open_p = float(q.get("ohlc", {}).get("open", 0))
+            high = float(q.get("ohlc", {}).get("high", 0))
+            low = float(q.get("ohlc", {}).get("low", 0))
+
+            pct = (change / (prev_close or 1)) * 100
 
             result.append({
                 "symbol": stock["trading_symbol"],
                 "company": stock["company_name"],
                 "ltp": round(ltp, 2),
-                "change_pct": round(pct, 2)
+                "change_pct": round(pct, 2),
+                "open": round(open_p, 2),
+                "high": round(high, 2),
+                "low": round(low, 2),
+                "close": round(prev_close, 2)
             })
         except Exception:
             continue
