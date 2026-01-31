@@ -6,7 +6,9 @@
 </head>
 <body>
 
-<h1>Nexus Asset Management</h1>
+<header class="header">
+    <h1>Nexus Asset Management</h1>
+</header>
 
 <div class="tabs">
     {% for t in tabs %}
@@ -15,12 +17,11 @@
             {{ t }}
         </button>
     {% endfor %}
-    <button onclick="createTab()">＋</button>
+    <button class="tab add-tab" onclick="createTab()">＋</button>
 </div>
 
 <div class="search-box">
-    <input id="search" placeholder="Type stock symbol">
-    <button id="addBtn" disabled>Add</button>
+    <input id="search" placeholder="Search stock symbol (e.g. ITC)" autocomplete="off">
     <div id="suggestions"></div>
 </div>
 
