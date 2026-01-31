@@ -30,35 +30,31 @@ searchInput.addEventListener("input", async () => {
 });
 
 addBtn.onclick = async () => {
-    if (!selectedStock) {
-        alert("Please select a stock from suggestions");
-        return;
-    }
-
     await fetch("/add", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(selectedStock)
     });
-
-    selectedStock = null;
     searchInput.value = "";
     addBtn.disabled = true;
-    loadWatchlist();
+    loadPrices();
 };
 
-async function loadWatchlist() {
-    const res = await fetch("/list");
+async function loadPrices() {
+    const res = await fetch("/prices");
     const data = await res.json();
     watchlistBody.innerHTML = "";
 
-    data.forEach(stock => {
+    data.forEach(s => {
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
-            <td>${stock.trading_symbol}</td>
-            <td>${stock.company_name}</td>
-            <td><button onclick="removeStock('${stock.trading_symbol}')">❌</button></td>
+            <td>${s.symbol}</td>
+            <td>${s.company}</td>
+            <td>${s.ltp}</td>
+            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
+                ${s.change_pct}%
+            </td>
+            <td><button onclick="removeStock('${s.symbol}')">❌</button></td>
         `;
         watchlistBody.appendChild(tr);
     });
@@ -70,7 +66,8 @@ async function removeStock(symbol) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: symbol})
     });
-    loadWatchlist();
+    loadPrices();
 }
 
-loadWatchlist();
+setInterval(loadPrices, 5000);
+loadPrices();
