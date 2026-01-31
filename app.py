@@ -1,7 +1,6 @@
 import os
 import csv
 import json
-import time
 import requests
 from flask import Flask, render_template, request, jsonify
 
@@ -47,67 +46,27 @@ def load_scrip_master():
 load_scrip_master()
 
 # =====================
-# SUPER TREND (15m)
+# SIMPLE SUPERTRAND LOGIC (15-MIN PROXY)
 # =====================
-SUPER_CACHE = {}
+def supertrend_signal(ltp, open_p, high, low):
+    midpoint = (high + low) / 2
 
-def supertrend_15m(exchange_token):
-    now = time.time()
-    if exchange_token in SUPER_CACHE and now - SUPER_CACHE[exchange_token]["ts"] < 120:
-        return SUPER_CACHE[exchange_token]["signal"]
-
-    url = f"https://mis.kotaksecurities.com/script-details/1.0/intraday/candle"
-    params = {
-        "exchange": "nse_cm",
-        "token": exchange_token,
-        "interval": "15minute"
-    }
-
-    r = requests.get(url, params=params, headers={
-        "Authorization": ACCESS_TOKEN
-    }).json()
-
-    candles = r.get("data", [])
-    if len(candles) < 20:
-        return "NA"
-
-    highs, lows, closes = [], [], []
-    for c in candles[-20:]:
-        highs.append(float(c["high"]))
-        lows.append(float(c["low"]))
-        closes.append(float(c["close"]))
-
-    # ATR(10)
-    trs = []
-    for i in range(1, len(highs)):
-        tr = max(
-            highs[i] - lows[i],
-            abs(highs[i] - closes[i-1]),
-            abs(lows[i] - closes[i-1])
-        )
-        trs.append(tr)
-
-    atr = sum(trs[-10:]) / 10
-    multiplier = 3
-
-    upper = (highs[-1] + lows[-1]) / 2 + multiplier * atr
-    lower = (highs[-1] + lows[-1]) / 2 - multiplier * atr
-
-    signal = "BUY" if closes[-1] > upper else "SELL"
-
-    SUPER_CACHE[exchange_token] = {
-        "signal": signal,
-        "ts": now
-    }
-
-    return signal
+    if ltp > midpoint and ltp > open_p:
+        return "BUY"
+    elif ltp < midpoint and ltp < open_p:
+        return "SELL"
+    return "NEUTRAL"
 
 # =====================
 # ROUTES
 # =====================
 @app.route("/")
 def index():
-    return render_template("index.html", tabs=WATCHLISTS.keys(), active=ACTIVE_TAB)
+    return render_template(
+        "index.html",
+        tabs=WATCHLISTS.keys(),
+        active=ACTIVE_TAB
+    )
 
 @app.route("/set-tab", methods=["POST"])
 def set_tab():
@@ -121,12 +80,15 @@ def new_tab():
     if name not in WATCHLISTS:
         WATCHLISTS[name] = []
         save_watchlists()
-    return jsonify(ok=True)
+    return jsonify(list(WATCHLISTS.keys()))
 
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIP_MASTER if q in s["trading_symbol"].lower()][:10])
+    return jsonify([
+        s for s in SCRIP_MASTER
+        if q in s["trading_symbol"].lower()
+    ][:10])
 
 @app.route("/add", methods=["POST"])
 def add():
@@ -134,16 +96,17 @@ def add():
     if stock not in WATCHLISTS[ACTIVE_TAB]:
         WATCHLISTS[ACTIVE_TAB].append(stock)
         save_watchlists()
-    return jsonify(ok=True)
+    return jsonify(WATCHLISTS[ACTIVE_TAB])
 
 @app.route("/remove", methods=["POST"])
 def remove():
-    sym = request.json["trading_symbol"]
+    symbol = request.json["trading_symbol"]
     WATCHLISTS[ACTIVE_TAB] = [
-        s for s in WATCHLISTS[ACTIVE_TAB] if s["trading_symbol"] != sym
+        s for s in WATCHLISTS[ACTIVE_TAB]
+        if s["trading_symbol"] != symbol
     ]
     save_watchlists()
-    return jsonify(ok=True)
+    return jsonify(WATCHLISTS[ACTIVE_TAB])
 
 @app.route("/prices")
 def prices():
@@ -160,21 +123,28 @@ def prices():
         quotes = [quotes]
 
     out = []
+
     for stock, q in zip(wl, quotes):
         ohlc = q.get("ohlc", {})
-        prev = float(ohlc.get("close", 1))
+        ltp = float(q.get("ltp", 0))
+        open_p = float(ohlc.get("open", 0))
+        high = float(ohlc.get("high", 0))
+        low = float(ohlc.get("low", 0))
+        close = float(ohlc.get("close", 1))
         change = float(q.get("change", 0))
+
+        signal = supertrend_signal(ltp, open_p, high, low)
 
         out.append({
             "symbol": stock["trading_symbol"],
             "company": stock["company_name"],
-            "ltp": round(float(q.get("ltp", 0)), 2),
-            "change_pct": round((change / prev) * 100, 2),
-            "open": round(float(ohlc.get("open", 0)), 2),
-            "high": round(float(ohlc.get("high", 0)), 2),
-            "low": round(float(ohlc.get("low", 0)), 2),
-            "close": round(prev, 2),
-            "supertrend": supertrend_15m(stock["exchange_token"])
+            "ltp": round(ltp, 2),
+            "change_pct": round((change / close) * 100, 2),
+            "open": round(open_p, 2),
+            "high": round(high, 2),
+            "low": round(low, 2),
+            "close": round(close, 2),
+            "supertrend": signal
         })
 
     return jsonify(out)
