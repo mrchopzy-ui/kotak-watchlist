@@ -42,10 +42,7 @@ addBtn.onclick = async () => {
 
 function openChart(symbol) {
     const tvSymbol = `NSE:${symbol.replace("-EQ", "")}`;
-    window.open(
-        `https://www.tradingview.com/chart/?symbol=${tvSymbol}`,
-        "_blank"
-    );
+    window.open(`https://www.tradingview.com/chart/?symbol=${tvSymbol}`, "_blank");
 }
 
 async function loadPrices() {
@@ -57,17 +54,15 @@ async function loadPrices() {
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td class="link" onclick="openChart('${s.symbol}')">
-                ${s.symbol}
-            </td>
+            <td class="link" onclick="openChart('${s.symbol}')">${s.symbol}</td>
             <td>${s.company}</td>
             <td>${s.ltp}</td>
-            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
-                ${s.change_pct}%
-            </td>
-            <td>
-                <button onclick="removeStock('${s.symbol}')">❌</button>
-            </td>
+            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">${s.change_pct}%</td>
+            <td>${s.open}</td>
+            <td>${s.high}</td>
+            <td>${s.low}</td>
+            <td>${s.close}</td>
+            <td><button onclick="removeStock('${s.symbol}')">❌</button></td>
         `;
 
         watchlistBody.appendChild(tr);
