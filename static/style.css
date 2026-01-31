@@ -1,16 +1,31 @@
-body { font-family: Arial; margin: 30px; }
-h1 { margin-bottom: 10px; }
-
-#tabs button {
-    margin-right: 6px;
-    padding: 6px 10px;
+body {
+    font-family: Arial;
+    margin: 40px;
 }
 
-.search-box { position: relative; width: 260px; }
+.tabs {
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 6px 12px;
+    margin-right: 4px;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: black;
+    color: white;
+}
+
+.search-box {
+    position: relative;
+    width: 260px;
+}
 
 #suggestions {
     position: absolute;
-    background: #fff;
+    background: white;
     border: 1px solid #ccc;
     width: 100%;
 }
@@ -24,6 +39,7 @@ table {
     margin-top: 20px;
     border-collapse: collapse;
     width: 100%;
+    font-size: 13px;
 }
 
 th, td {
@@ -32,6 +48,11 @@ th, td {
     text-align: center;
 }
 
-.link { color: #0066cc; cursor: pointer; font-weight: bold; }
+.link {
+    cursor: pointer;
+    color: blue;
+    font-weight: bold;
+}
+
 .green { color: green; }
 .red { color: red; }
