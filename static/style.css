@@ -1,57 +1,121 @@
 body {
-    font-family: Arial;
-    margin: 40px;
+    font-family: Inter, Arial, sans-serif;
+    margin: 0;
+    background: #f5f6f8;
+}
+
+.header {
+    background: #0b1c2d;
+    color: white;
+    padding: 16px 40px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 22px;
 }
 
 .tabs {
-    margin-bottom: 15px;
+    padding: 12px 40px;
+    background: #ffffff;
+    border-bottom: 1px solid #ddd;
 }
 
 .tab {
     padding: 6px 12px;
-    margin-right: 4px;
+    margin-right: 6px;
+    border: none;
+    background: #eee;
     cursor: pointer;
+    border-radius: 4px;
 }
 
 .tab.active {
-    background: black;
+    background: #0b1c2d;
     color: white;
+}
+
+.tab.add-tab {
+    font-weight: bold;
 }
 
 .search-box {
     position: relative;
-    width: 260px;
+    width: 320px;
+    margin: 20px 40px;
+}
+
+#search {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
 }
 
 #suggestions {
     position: absolute;
+    width: 100%;
     background: white;
     border: 1px solid #ccc;
-    width: 100%;
+    z-index: 10;
+    max-height: 240px;
+    overflow-y: auto;
 }
 
-#suggestions div {
-    padding: 6px;
+.suggestion-item {
+    padding: 8px 10px;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.suggestion-item span {
+    font-size: 12px;
+    color: #666;
+}
+
+.suggestion-item:hover {
+    background: #eef3ff;
 }
 
 table {
-    margin-top: 20px;
+    margin: 0 40px 40px 40px;
+    width: calc(100% - 80px);
     border-collapse: collapse;
-    width: 100%;
-    font-size: 13px;
+    background: white;
 }
 
 th, td {
-    border: 1px solid #ccc;
-    padding: 6px;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
     text-align: center;
+    font-size: 13px;
+}
+
+th {
+    background: #f0f2f5;
+    font-weight: 600;
+}
+
+.company {
+    text-align: left;
 }
 
 .link {
     cursor: pointer;
-    color: blue;
-    font-weight: bold;
+    color: #0b5ed7;
+    font-weight: 600;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.delete {
+    background: none;
+    border: none;
+    color: red;
+    cursor: pointer;
+    font-size: 16px;
 }
 
 .green { color: green; }
