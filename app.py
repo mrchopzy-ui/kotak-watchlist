@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 
 # =====================
-# ENV VARIABLES (Render-safe)
+# ENV VAR
 # =====================
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 
@@ -71,25 +71,45 @@ def prices():
         f"nse_cm|{s['exchange_token']}" for s in WATCHLIST
     )
 
-    url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{query}/ltp"
+    url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{query}/all"
 
-    r = requests.get(
-        url,
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
+    try:
+        resp = requests.get(
+            url,
+            headers={"Authorization": ACCESS_TOKEN},
+            timeout=5
+        ).json()
+    except Exception:
+        return jsonify([])
+
+    # ---- NORMALIZE RESPONSE ----
+    if isinstance(resp, dict) and "data" in resp:
+        quotes = resp["data"]
+    elif isinstance(resp, list):
+        quotes = resp
+    else:
+        return jsonify([])
+
+    if isinstance(quotes, dict):
+        quotes = [quotes]
 
     result = []
-    for s, q in zip(WATCHLIST, r):
-        ltp = float(q["ltp"])
-        prev = ltp - float(q["change"])
-        pct = (q["change"] / prev * 100) if prev else 0
 
-        result.append({
-            "symbol": s["trading_symbol"],
-            "company": s["company_name"],
-            "ltp": round(ltp, 2),
-            "change_pct": round(pct, 2)
-        })
+    for stock, q in zip(WATCHLIST, quotes):
+        try:
+            ltp = float(q.get("ltp", 0))
+            change = float(q.get("change", 0))
+            prev = ltp - change
+            pct = (change / prev * 100) if prev else 0
+
+            result.append({
+                "symbol": stock["trading_symbol"],
+                "company": stock["company_name"],
+                "ltp": round(ltp, 2),
+                "change_pct": round(pct, 2)
+            })
+        except Exception:
+            continue
 
     return jsonify(result)
 
