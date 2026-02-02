@@ -60,7 +60,35 @@ body {
 }
 
 .search-box {
+    position: relative;
     margin: 20px 30px;
+    width: 300px;
+}
+
+#search {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+#suggestions {
+    position: absolute;
+    width: 100%;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 100;
+}
+
+.suggestion-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background: #eef3ff;
 }
 
 table {
