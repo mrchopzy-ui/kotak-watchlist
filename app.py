@@ -1,34 +1,39 @@
-from flask import Flask, render_template, request, jsonify
-import os
+from flask import Flask, render_template, jsonify, request
 import csv
+import os
 import requests
 
 app = Flask(__name__)
 
-# ---------------- CONFIG ----------------
+DATA_FILE = "data/nse_eq_scrip_master.csv"
+
 WATCHLISTS = {"Watchlist 1": []}
 ACTIVE_TAB = "Watchlist 1"
 
-SCRIP_MASTER = []
-SCRIP_PATH = "data/nse_eq_scrip_master.csv"
+SCRIPS = []
 
 # ---------------- LOAD SCRIP MASTER ----------------
+
 def load_scrip_master():
-    global SCRIP_MASTER
-    if not os.path.exists(SCRIP_PATH):
-        print("❌ Local scrip master not found")
-        return
+    global SCRIPS
+    if not os.path.exists(DATA_FILE):
+        print("❌ nse_eq_scrip_master.csv not found")
+        exit(1)
 
-    with open(SCRIP_PATH, encoding="utf-8") as f:
+    with open(DATA_FILE, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        SCRIP_MASTER = list(reader)
+        SCRIPS = list(reader)
 
-    if not SCRIP_MASTER:
+    if not SCRIPS:
         print("❌ Local scrip master is empty")
-    else:
-        print(f"✅ Loaded {len(SCRIP_MASTER)} stocks")
+        exit(1)
+
+    print(f"✅ Loaded {len(SCRIPS)} EQ stocks")
+
+load_scrip_master()
 
 # ---------------- ROUTES ----------------
+
 @app.route("/")
 def index():
     return render_template(
@@ -39,19 +44,18 @@ def index():
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").upper()
-    results = [
-        s for s in SCRIP_MASTER
-        if q in s["trading_symbol"]
-    ][:10]
-    return jsonify(results)
+    q = request.args.get("q", "").lower()
+    return jsonify([
+        s for s in SCRIPS
+        if q in s["trading_symbol"].lower()
+    ][:10])
 
 @app.route("/add", methods=["POST"])
 def add_stock():
     stock = request.json
     if stock not in WATCHLISTS[ACTIVE_TAB]:
         WATCHLISTS[ACTIVE_TAB].append(stock)
-    return jsonify({"ok": True})
+    return "", 204
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
@@ -60,51 +64,39 @@ def remove_stock():
         s for s in WATCHLISTS[ACTIVE_TAB]
         if s["trading_symbol"] != symbol
     ]
-    return jsonify({"ok": True})
+    return "", 204
 
 @app.route("/prices")
 def prices():
-    data = []
-    for s in WATCHLISTS[ACTIVE_TAB]:
-        data.append({
-            "symbol": s["trading_symbol"],
-            "company": s["company_name"],
-            "ltp": round(float(s.get("ltp", 0)), 2),
-            "change_pct": round(float(s.get("change_pct", 0)), 2),
-            "open": round(float(s.get("open", 0)), 2),
-            "high": round(float(s.get("high", 0)), 2),
-            "low": round(float(s.get("low", 0)), 2),
-            "close": round(float(s.get("close", 0)), 2),
-        })
-    return jsonify(data)
+    result = []
 
-@app.route("/set-tab", methods=["POST"])
-def set_tab():
-    global ACTIVE_TAB
-    ACTIVE_TAB = request.json["tab"]
-    return jsonify({"ok": True})
+    for s in WATCHLISTS[ACTIVE_TAB]:
+        # Dummy prices (replace with Kotak Quotes later)
+        result.append({
+            "symbol": s["trading_symbol"],
+            "company": s["company_name"],   # ✅ FIX HERE
+            "ltp": 123.45,
+            "change_pct": 1.23,
+            "open": 120.00,
+            "high": 125.00,
+            "low": 119.50,
+            "close": 121.00
+        })
+
+    return jsonify(result)
 
 @app.route("/new-tab", methods=["POST"])
 def new_tab():
     name = request.json["name"]
     if name not in WATCHLISTS:
         WATCHLISTS[name] = []
-    return jsonify({"ok": True})
+    return "", 204
 
-@app.route("/rename-tab", methods=["POST"])
-def rename_tab():
+@app.route("/set-tab", methods=["POST"])
+def set_tab():
     global ACTIVE_TAB
-    old = request.json["old"]
-    new = request.json["new"]
+    ACTIVE_TAB = request.json["tab"]
+    return "", 204
 
-    if old in WATCHLISTS and new not in WATCHLISTS:
-        WATCHLISTS[new] = WATCHLISTS.pop(old)
-        if ACTIVE_TAB == old:
-            ACTIVE_TAB = new
-
-    return jsonify({"ok": True})
-
-# ---------------- START ----------------
 if __name__ == "__main__":
-    load_scrip_master()
     app.run(debug=True)
