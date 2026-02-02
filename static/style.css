@@ -1,56 +1,44 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Inter, Arial, sans-serif;
     margin: 0;
-    background: #f6f8fb;
+    background: #f4f6f9;
 }
 
-/* ================= HEADER ================= */
-
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* HEADER */
+.header {
     background: linear-gradient(90deg, #0b1c2d, #122b45);
     color: white;
-    padding: 14px 40px;
+    padding: 18px 40px;
 }
 
-.indices {
-    display: flex;
-    gap: 12px;
+.header h1 {
+    margin: 0;
+    font-size: 22px;
 }
 
-.index-card {
-    background: rgba(255,255,255,0.15);
-    padding: 8px 14px;
-    border-radius: 8px;
-    text-align: right;
-    min-width: 110px;
-}
-
-.index-card .name {
-    font-size: 11px;
-    opacity: 0.9;
-}
-
-.index-card .price {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-/* ================= TABS ================= */
-
+/* TABS */
 .tabs {
-    padding: 10px 40px;
+    padding: 12px 40px;
     background: white;
+    border-bottom: 1px solid #ddd;
 }
 
 .tab {
     padding: 6px 14px;
-    border-radius: 6px;
-    border: none;
     margin-right: 6px;
+    border: none;
+    background: #e9ecf1;
     cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.tab:hover {
+    background: #dbe2ef;
 }
 
 .tab.active {
@@ -58,77 +46,137 @@ body {
     color: white;
 }
 
-/* ================= SEARCH (IMPORTANT FIX) ================= */
+.tab.add-tab {
+    font-weight: bold;
+}
 
+/* SEARCH */
 .search-box {
-    position: relative;          /* 🔑 REQUIRED */
-    margin: 20px 40px;
-    width: 300px;
+    position: relative;
+    width: 340px;
+    margin: 22px 40px;
 }
 
 #search {
     width: 100%;
-    padding: 8px;
-    font-size: 13px;
+    padding: 11px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
 }
 
-/* 🔑 DROPDOWN VISIBILITY */
 #suggestions {
     position: absolute;
-    top: 36px;
-    left: 0;
     width: 100%;
     background: white;
-    border: 1px solid #ccc;
     border-radius: 6px;
-    z-index: 9999;               /* 🔑 REQUIRED */
+    border: 1px solid #ccc;
+    z-index: 10;
     max-height: 260px;
     overflow-y: auto;
+    animation: fadeIn 0.15s ease;
 }
 
 .suggestion-item {
-    padding: 8px 10px;
+    padding: 10px;
     cursor: pointer;
-    font-size: 13px;
+}
+
+.suggestion-item span {
+    font-size: 12px;
+    color: #666;
 }
 
 .suggestion-item:hover {
     background: #eef3ff;
 }
 
-/* ================= TABLE ================= */
-
+/* TABLE */
 table {
     margin: 0 40px 40px;
     width: calc(100% - 80px);
     border-collapse: collapse;
     background: white;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 th, td {
-    padding: 8px;
+    padding: 9px;
     text-align: center;
     font-size: 13px;
 }
 
 th {
-    background: #eef1f6;
+    background: #f1f3f6;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
 }
 
-/* ================= COLORS ================= */
-
-.green {
-    color: #0a8a3a;
+th:hover {
+    background: #e4e7ec;
 }
 
-.red {
-    color: #c62828;
+tr {
+    transition: background 0.15s ease;
+}
+
+tr:hover {
+    background: #f8fafc;
+}
+
+.company {
+    text-align: left;
+}
+
+/* LINKS & ACTIONS */
+.link {
+    cursor: pointer;
+    color: #0b5ed7;
+    font-weight: 600;
+}
+
+.link:hover {
+    text-decoration: underline;
 }
 
 .delete {
     background: none;
     border: none;
-    color: red;
-    cursor: pointer;
+    color: #d11a2a;
     font-size: 16px;
+    cursor: pointer;
+}
+
+.green { color: #0a8a3a; }
+.red { color: #c62828; }
+
+/* ANIMATION */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.index-row {
+    background: #f1f5ff;
+    font-weight: 600;
+}
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.indices {
+    display: flex;
+    gap: 16px;
+}
+
+.index-card {
+    background: #f4f6fb;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-align: right;
+    min-width: 120px;
+    font-size: 14px;
 }
