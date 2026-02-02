@@ -54,11 +54,10 @@ function renderTable() {
     let data = [...lastData];
 
     if (sortColumn) {
-        data.sort((a, b) => {
-            return sortAsc
-                ? a[sortColumn] - b[sortColumn]
-                : b[sortColumn] - a[sortColumn];
-        });
+        data.sort((a, b) =>
+            sortAsc ? a[sortColumn] - b[sortColumn]
+                    : b[sortColumn] - a[sortColumn]
+        );
     }
 
     tbody.innerHTML = "";
@@ -72,7 +71,7 @@ function renderTable() {
             <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
                 ${s.change_pct.toFixed(2)}%
             </td>
-            <td>${formatVolume(s.volume)}</td>
+            <td>${formatVolume(s.volume)}</td> <!-- ✅ FIX -->
             <td>${s.open.toFixed(2)}</td>
             <td>${s.high.toFixed(2)}</td>
             <td>${s.low.toFixed(2)}</td>
