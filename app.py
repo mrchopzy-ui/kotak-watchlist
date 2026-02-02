@@ -20,22 +20,6 @@ ACTIVE_TAB = "Watchlist 1"
 SCRIPS = []
 SESSION = {}
 
-# -------- INDICES (STATIC) --------
-INDICES = [
-    {
-        "type": "INDEX",
-        "symbol": "NIFTY 50",
-        "company_name": "NIFTY 50",
-        "exchange_token": "Nifty 50"
-    },
-    {
-        "type": "INDEX",
-        "symbol": "NIFTY BANK",
-        "company_name": "NIFTY BANK",
-        "exchange_token": "Nifty Bank"
-    }
-]
-
 # -------- LOGIN --------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
@@ -73,9 +57,8 @@ def load_scrip_master():
     global SCRIPS
     with open(DATA_FILE, newline="", encoding="utf-8") as f:
         SCRIPS = list(csv.DictReader(f))
-
     if not SCRIPS:
-        raise SystemExit("❌ Local scrip master empty")
+        raise SystemExit("❌ Scrip master empty")
 
 load_scrip_master()
 
@@ -111,37 +94,55 @@ def remove_stock():
     ]
     return "", 204
 
-# -------- PRICES (STOCKS + INDICES) --------
+# -------- STOCK PRICES --------
 @app.route("/prices")
 def prices():
-    items = INDICES + WATCHLISTS[ACTIVE_TAB]
+    if not WATCHLISTS[ACTIVE_TAB]:
+        return jsonify([])
 
-    queries = []
-    for i in items:
-        if i.get("type") == "INDEX":
-            queries.append(f"nse_cm|{i['exchange_token']}")
-        else:
-            queries.append(f"nse_cm|{i['exchange_token']}")
+    queries = ",".join(
+        f"nse_cm|{s['exchange_token']}"
+        for s in WATCHLISTS[ACTIVE_TAB]
+    )
 
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{','.join(queries)}/all"
-
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     resp = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for q, i in zip(resp, items):
+    for q, s in zip(resp, WATCHLISTS[ACTIVE_TAB]):
         ohlc = q.get("ohlc", {})
-
         out.append({
-            "symbol": i["symbol"] if i.get("type") == "INDEX" else i["trading_symbol"],
-            "company": i["company_name"],
+            "symbol": s["trading_symbol"],
+            "company": s["company_name"],
             "ltp": float(q.get("ltp", 0)),
             "change_pct": float(q.get("per_change", 0)),
             "volume": int(q.get("last_volume", 0)),
             "open": float(ohlc.get("open", 0)),
             "high": float(ohlc.get("high", 0)),
             "low": float(ohlc.get("low", 0)),
-            "close": float(ohlc.get("close", 0)),
-            "is_index": i.get("type") == "INDEX"
+            "close": float(ohlc.get("close", 0))
+        })
+
+    return jsonify(out)
+
+# -------- INDEX PRICES (TOP RIGHT) --------
+@app.route("/indices")
+def indices():
+    names = {
+        "NIFTY 50": "Nifty 50",
+        "NIFTY BANK": "Nifty Bank"
+    }
+
+    queries = ",".join(f"nse_cm|{v}" for v in names.values())
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    resp = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+
+    out = []
+    for q, (k, _) in zip(resp, names.items()):
+        out.append({
+            "name": k,
+            "ltp": float(q.get("ltp", 0)),
+            "change_pct": float(q.get("per_change", 0))
         })
 
     return jsonify(out)
