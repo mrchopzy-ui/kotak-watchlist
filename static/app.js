@@ -6,8 +6,15 @@ const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
 
-/* ---------- SEARCH (SYMBOL ONLY) ---------- */
+/* ---------- FORMAT VOLUME ---------- */
+function formatVolume(v) {
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
+    if (v >= 1e3) return (v / 1e3).toFixed(2) + "K";
+    return v.toString();
+}
 
+/* ---------- SEARCH ---------- */
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
@@ -36,7 +43,6 @@ search.addEventListener("input", async () => {
 });
 
 /* ---------- SORT ---------- */
-
 function sortBy(col) {
     sortAsc = sortColumn === col ? !sortAsc : true;
     sortColumn = col;
@@ -44,15 +50,14 @@ function sortBy(col) {
 }
 
 /* ---------- TABLE ---------- */
-
 function renderTable() {
     let data = [...lastData];
 
     if (sortColumn) {
         data.sort((a, b) => {
-            let x = a[sortColumn];
-            let y = b[sortColumn];
-            return sortAsc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+            return sortAsc
+                ? a[sortColumn] - b[sortColumn]
+                : b[sortColumn] - a[sortColumn];
         });
     }
 
@@ -61,12 +66,13 @@ function renderTable() {
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
-            <td class="link">${s.symbol}</td>
-            <td class="company">${s.company}</td>
+            <td>${s.symbol}</td>
+            <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
             <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
                 ${s.change_pct.toFixed(2)}%
             </td>
+            <td>${formatVolume(s.volume)}</td>
             <td>${s.open.toFixed(2)}</td>
             <td>${s.high.toFixed(2)}</td>
             <td>${s.low.toFixed(2)}</td>
@@ -95,5 +101,3 @@ async function removeStock(symbol) {
 
 setInterval(loadPrices, 5000);
 loadPrices();
-
-<td>${s.volume}</td>
