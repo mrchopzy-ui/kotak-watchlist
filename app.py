@@ -1,13 +1,9 @@
 from flask import Flask, render_template, jsonify, request
-import csv
-import os
-import requests
-import pyotp
+import csv, os, requests, pyotp
 
 app = Flask(__name__)
 
-# ---------------- CONFIG (ENV VARIABLES) ----------------
-
+# ---------- ENV VARIABLES ----------
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
@@ -19,26 +15,16 @@ DATA_FILE = "data/nse_eq_scrip_master.csv"
 WATCHLISTS = {"Watchlist 1": []}
 ACTIVE_TAB = "Watchlist 1"
 SCRIPS = []
-
 SESSION = {}
 
-# ---------------- LOGIN ----------------
-
+# ---------- LOGIN ----------
 def login():
-    print("🔐 Logging in to Kotak...")
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi"
-        },
-        json={
-            "mobileNumber": MOBILE,
-            "ucc": USER_ID,
-            "totp": totp
-        }
+        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
     ).json()
 
     r2 = requests.post(
@@ -53,101 +39,77 @@ def login():
     ).json()
 
     SESSION["base"] = r2["data"]["baseUrl"]
-    SESSION["sid"] = r2["data"]["sid"]
-    SESSION["token"] = r2["data"]["token"]
 
 login()
 
-# ---------------- LOAD SCRIP MASTER ----------------
+# ---------- LOAD SCRIP MASTER ----------
+with open(DATA_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
 
-def load_scrip_master():
-    global SCRIPS
-    print("📂 Loading LOCAL scrip master...")
+# ---------- HELPERS ----------
+def fmt_vol(v):
+    v = float(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
+    return str(int(v))
 
-    with open(DATA_FILE, newline="", encoding="utf-8") as f:
-        SCRIPS = list(csv.DictReader(f))
-
-    if not SCRIPS:
-        raise SystemExit("❌ Local scrip master is empty")
-
-    print(f"✅ Loaded {len(SCRIPS)} EQ stocks")
-
-load_scrip_master()
-
-# ---------------- ROUTES ----------------
-
+# ---------- ROUTES ----------
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        tabs=WATCHLISTS.keys(),
-        active=ACTIVE_TAB
-    )
+    return render_template("index.html", tabs=WATCHLISTS.keys(), active=ACTIVE_TAB)
 
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([
-        s for s in SCRIPS
-        if q in s["trading_symbol"].lower()
-    ][:10])
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
 @app.route("/add", methods=["POST"])
-def add_stock():
-    stock = request.json
-    if stock not in WATCHLISTS[ACTIVE_TAB]:
-        WATCHLISTS[ACTIVE_TAB].append(stock)
+def add():
+    s = request.json
+    if s not in WATCHLISTS[ACTIVE_TAB]:
+        WATCHLISTS[ACTIVE_TAB].append(s)
     return "", 204
 
 @app.route("/remove", methods=["POST"])
-def remove_stock():
+def remove():
     sym = request.json["trading_symbol"]
-    WATCHLISTS[ACTIVE_TAB] = [
-        s for s in WATCHLISTS[ACTIVE_TAB]
-        if s["trading_symbol"] != sym
-    ]
+    WATCHLISTS[ACTIVE_TAB] = [s for s in WATCHLISTS[ACTIVE_TAB] if s["trading_symbol"] != sym]
     return "", 204
-
-# ---------------- LIVE PRICES ----------------
 
 @app.route("/prices")
 def prices():
     if not WATCHLISTS[ACTIVE_TAB]:
         return jsonify([])
 
-    queries = ",".join(
-        f"nse_cm|{s['exchange_token']}"
-        for s in WATCHLISTS[ACTIVE_TAB]
-    )
+    q = ",".join(f"nse_cm|{s['exchange_token']}" for s in WATCHLISTS[ACTIVE_TAB])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
 
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
-
-    r = requests.get(
-        url,
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
-
+    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
     out = []
-    for q, s in zip(r, WATCHLISTS[ACTIVE_TAB]):
-        ohlc = q.get("ohlc", {})
 
+    for r, s in zip(data, WATCHLISTS[ACTIVE_TAB]):
+        o = r.get("ohlc", {})
         out.append({
             "symbol": s["trading_symbol"],
             "company": s["company_name"],
-            "ltp": float(q["ltp"]),
-            "change_pct": float(q["per_change"]),
-            "open": float(ohlc.get("open", 0)),
-            "high": float(ohlc.get("high", 0)),
-            "low": float(ohlc.get("low", 0)),
-            "close": float(ohlc.get("close", 0))
+            "ltp": float(r["ltp"]),
+            "change_pct": float(r["per_change"]),
+            "open": float(o.get("open", 0)),
+            "high": float(o.get("high", 0)),
+            "low": float(o.get("low", 0)),
+            "close": float(o.get("close", 0)),
+            "volume": fmt_vol(r.get("last_volume", 0))
         })
 
     return jsonify(out)
 
 @app.route("/new-tab", methods=["POST"])
 def new_tab():
-    name = request.json["name"]
-    WATCHLISTS[name] = []
+    WATCHLISTS[request.json["name"]] = []
     return "", 204
 
 @app.route("/set-tab", methods=["POST"])
