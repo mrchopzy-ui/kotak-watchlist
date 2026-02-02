@@ -8,15 +8,13 @@
 
 <header class="top-bar">
     <h1>Nexus Asset Management</h1>
-
-    <div class="indices" id="indices"></div>
 </header>
 
 <div class="tabs">
-    {% for t in tabs %}
-        <button class="tab {% if t == active %}active{% endif %}">{{ t }}</button>
+    {% for w in watchlists %}
+        <button class="tab">{{ w[1] }}</button>
     {% endfor %}
-    <button class="tab add">+</button>
+    <button class="tab add" onclick="newWatchlist()">+</button>
 </div>
 
 <div class="search-box">
