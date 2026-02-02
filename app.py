@@ -1,53 +1,34 @@
+from flask import Flask, render_template, request, jsonify
 import os
 import csv
-import json
 import requests
-from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
+# ---------------- CONFIG ----------------
+WATCHLISTS = {"Watchlist 1": []}
+ACTIVE_TAB = "Watchlist 1"
 
-DATA_DIR = "data"
-WATCHLIST_FILE = os.path.join(DATA_DIR, "watchlists.json")
-
-# =====================
-# LOAD / SAVE WATCHLISTS
-# =====================
-def load_watchlists():
-    if not os.path.exists(WATCHLIST_FILE):
-        return {"Watchlist 1": []}
-    with open(WATCHLIST_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_watchlists():
-    with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
-        json.dump(WATCHLISTS, f, indent=2)
-
-WATCHLISTS = load_watchlists()
-ACTIVE_TAB = list(WATCHLISTS.keys())[0]
-
-# =====================
-# LOAD SCRIP MASTER
-# =====================
 SCRIP_MASTER = []
+SCRIP_PATH = "data/nse_eq_scrip_master.csv"
 
+# ---------------- LOAD SCRIP MASTER ----------------
 def load_scrip_master():
-    path = os.path.join(DATA_DIR, "nse_eq_scrip_master.csv")
-    with open(path, newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            SCRIP_MASTER.append({
-                "exchange": "nse_cm",
-                "exchange_token": r["exchange_token"],
-                "trading_symbol": r["trading_symbol"],
-                "company_name": r["company_name"]
-            })
+    global SCRIP_MASTER
+    if not os.path.exists(SCRIP_PATH):
+        print("❌ Local scrip master not found")
+        return
 
-load_scrip_master()
+    with open(SCRIP_PATH, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        SCRIP_MASTER = list(reader)
 
-# =====================
-# ROUTES
-# =====================
+    if not SCRIP_MASTER:
+        print("❌ Local scrip master is empty")
+    else:
+        print(f"✅ Loaded {len(SCRIP_MASTER)} stocks")
+
+# ---------------- ROUTES ----------------
 @app.route("/")
 def index():
     return render_template(
@@ -56,80 +37,74 @@ def index():
         active=ACTIVE_TAB
     )
 
+@app.route("/search")
+def search():
+    q = request.args.get("q", "").upper()
+    results = [
+        s for s in SCRIP_MASTER
+        if q in s["trading_symbol"]
+    ][:10]
+    return jsonify(results)
+
+@app.route("/add", methods=["POST"])
+def add_stock():
+    stock = request.json
+    if stock not in WATCHLISTS[ACTIVE_TAB]:
+        WATCHLISTS[ACTIVE_TAB].append(stock)
+    return jsonify({"ok": True})
+
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    symbol = request.json["trading_symbol"]
+    WATCHLISTS[ACTIVE_TAB] = [
+        s for s in WATCHLISTS[ACTIVE_TAB]
+        if s["trading_symbol"] != symbol
+    ]
+    return jsonify({"ok": True})
+
+@app.route("/prices")
+def prices():
+    data = []
+    for s in WATCHLISTS[ACTIVE_TAB]:
+        data.append({
+            "symbol": s["trading_symbol"],
+            "company": s["company_name"],
+            "ltp": round(float(s.get("ltp", 0)), 2),
+            "change_pct": round(float(s.get("change_pct", 0)), 2),
+            "open": round(float(s.get("open", 0)), 2),
+            "high": round(float(s.get("high", 0)), 2),
+            "low": round(float(s.get("low", 0)), 2),
+            "close": round(float(s.get("close", 0)), 2),
+        })
+    return jsonify(data)
+
 @app.route("/set-tab", methods=["POST"])
 def set_tab():
     global ACTIVE_TAB
     ACTIVE_TAB = request.json["tab"]
-    return jsonify(ok=True)
+    return jsonify({"ok": True})
 
 @app.route("/new-tab", methods=["POST"])
 def new_tab():
     name = request.json["name"]
     if name not in WATCHLISTS:
         WATCHLISTS[name] = []
-        save_watchlists()
-    return jsonify(list(WATCHLISTS.keys()))
+    return jsonify({"ok": True})
 
-@app.route("/search")
-def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([
-        s for s in SCRIP_MASTER
-        if q in s["trading_symbol"].lower()
-    ][:10])
+@app.route("/rename-tab", methods=["POST"])
+def rename_tab():
+    global ACTIVE_TAB
+    old = request.json["old"]
+    new = request.json["new"]
 
-@app.route("/add", methods=["POST"])
-def add():
-    stock = request.json
-    if stock not in WATCHLISTS[ACTIVE_TAB]:
-        WATCHLISTS[ACTIVE_TAB].append(stock)
-        save_watchlists()
-    return jsonify(WATCHLISTS[ACTIVE_TAB])
+    if old in WATCHLISTS and new not in WATCHLISTS:
+        WATCHLISTS[new] = WATCHLISTS.pop(old)
+        if ACTIVE_TAB == old:
+            ACTIVE_TAB = new
 
-@app.route("/remove", methods=["POST"])
-def remove():
-    symbol = request.json["trading_symbol"]
-    WATCHLISTS[ACTIVE_TAB] = [
-        s for s in WATCHLISTS[ACTIVE_TAB]
-        if s["trading_symbol"] != symbol
-    ]
-    save_watchlists()
-    return jsonify(WATCHLISTS[ACTIVE_TAB])
+    return jsonify({"ok": True})
 
-@app.route("/prices")
-def prices():
-    wl = WATCHLISTS.get(ACTIVE_TAB, [])
-    if not wl:
-        return jsonify([])
-
-    query = ",".join(f"nse_cm|{s['exchange_token']}" for s in wl)
-    url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{query}/all"
-
-    r = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-
-    quotes = r["data"] if isinstance(r, dict) else r
-    if isinstance(quotes, dict):
-        quotes = [quotes]
-
-    out = []
-    for stock, q in zip(wl, quotes):
-        ohlc = q.get("ohlc", {})
-        prev = float(ohlc.get("close", 1))
-        change = float(q.get("change", 0))
-
-        out.append({
-            "symbol": stock["trading_symbol"],
-            "company": stock["company_name"],
-            "ltp": round(float(q.get("ltp", 0)), 2),
-            "change_pct": round((change / prev) * 100, 2),
-            "open": round(float(ohlc.get("open", 0)), 2),
-            "high": round(float(ohlc.get("high", 0)), 2),
-            "low": round(float(ohlc.get("low", 0)), 2),
-            "close": round(prev, 2)
-        })
-
-    return jsonify(out)
-
+# ---------------- START ----------------
 if __name__ == "__main__":
-    os.makedirs(DATA_DIR, exist_ok=True)
-    app.run(host="0.0.0.0", port=5000)
+    load_scrip_master()
+    app.run(debug=True)
