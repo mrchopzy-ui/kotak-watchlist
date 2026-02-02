@@ -1,47 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Nexus Asset Management</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- App CSS -->
     <link rel="stylesheet" href="/static/style.css">
+
+    <!-- App JS -->
+    <script src="/static/app.js" defer></script>
 </head>
 <body>
 
-<header class="header">
+<header class="top-bar">
     <h1>Nexus Asset Management</h1>
 </header>
 
-<div class="tabs">
-    {% for t in tabs %}
-        <button class="tab {{ 'active' if t == active else '' }}"
-                onclick="switchTab('{{ t }}')">
-            {{ t }}
+<main class="container">
+
+    <!-- Search -->
+    <div class="search-box">
+        <input
+            id="search"
+            type="text"
+            placeholder="Type stock symbol (e.g. TCS, INFY, RELIANCE)"
+            autocomplete="off"
+        >
+        <div id="suggestions"></div>
+    </div>
+
+    <!-- Watchlist Tabs -->
+    <div class="tabs">
+        {% for tab in tabs %}
+        <button
+            class="tab {% if tab == active %}active{% endif %}"
+            onclick="switchTab('{{ tab }}')"
+        >
+            {{ tab }}
         </button>
-    {% endfor %}
-    <button class="tab add-tab" onclick="createTab()">＋</button>
-</div>
+        {% endfor %}
+    </div>
 
-<div class="search-box">
-    <input id="search" placeholder="Search stock symbol (e.g. ITC)" autocomplete="off">
-    <div id="suggestions"></div>
-</div>
+    <!-- Table -->
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortBy('symbol')">Symbol</th>
+                    <th onclick="sortBy('company')">Company</th>
+                    <th onclick="sortBy('ltp')">LTP</th>
+                    <th onclick="sortBy('change_pct')">%</th>
+                    <th onclick="sortBy('open')">Open</th>
+                    <th onclick="sortBy('high')">High</th>
+                    <th onclick="sortBy('low')">Low</th>
+                    <th onclick="sortBy('close')">Close</th>
+                    <th onclick="sortBy('volume')">Volume</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody id="watchlist">
+                <!-- Rows injected by JS -->
+            </tbody>
+        </table>
+    </div>
 
-<table>
-    <thead>
-        <tr>
-            <th onclick="sortBy('symbol')">Symbol</th>
-            <th onclick="sortBy('company')">Company</th>
-            <th onclick="sortBy('ltp')">LTP</th>
-            <th onclick="sortBy('change_pct')">%</th>
-            <th onclick="sortBy('open')">O</th>
-            <th onclick="sortBy('high')">H</th>
-            <th onclick="sortBy('low')">L</th>
-            <th onclick="sortBy('close')">C</th>
-            <th>Delete</th>
-        </tr>
-    </thead>
-    <tbody id="watchlist"></tbody>
-</table>
+</main>
 
-<script src="/static/app.js"></script>
 </body>
 </html>
