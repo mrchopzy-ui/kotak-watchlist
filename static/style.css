@@ -4,7 +4,8 @@ body {
     background: #f6f8fb;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
+
 .top-bar {
     display: flex;
     justify-content: space-between;
@@ -14,7 +15,6 @@ body {
     padding: 14px 40px;
 }
 
-/* INDICES */
 .indices {
     display: flex;
     gap: 12px;
@@ -25,9 +25,21 @@ body {
     padding: 8px 14px;
     border-radius: 8px;
     text-align: right;
+    min-width: 110px;
 }
 
-/* TABS */
+.index-card .name {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
+.index-card .price {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* ================= TABS ================= */
+
 .tabs {
     padding: 10px 40px;
     background: white;
@@ -38,11 +50,18 @@ body {
     border-radius: 6px;
     border: none;
     margin-right: 6px;
+    cursor: pointer;
 }
 
-/* SEARCH */
+.tab.active {
+    background: #0b1c2d;
+    color: white;
+}
+
+/* ================= SEARCH (IMPORTANT FIX) ================= */
+
 .search-box {
-    position: relative;
+    position: relative;          /* 🔑 REQUIRED */
     margin: 20px 40px;
     width: 300px;
 }
@@ -50,27 +69,35 @@ body {
 #search {
     width: 100%;
     padding: 8px;
+    font-size: 13px;
 }
 
+/* 🔑 DROPDOWN VISIBILITY */
 #suggestions {
     position: absolute;
     top: 36px;
+    left: 0;
     width: 100%;
     background: white;
     border: 1px solid #ccc;
-    z-index: 20;
+    border-radius: 6px;
+    z-index: 9999;               /* 🔑 REQUIRED */
+    max-height: 260px;
+    overflow-y: auto;
 }
 
 .suggestion-item {
-    padding: 8px;
+    padding: 8px 10px;
     cursor: pointer;
+    font-size: 13px;
 }
 
 .suggestion-item:hover {
     background: #eef3ff;
 }
 
-/* TABLE */
+/* ================= TABLE ================= */
+
 table {
     margin: 0 40px 40px;
     width: calc(100% - 80px);
@@ -88,12 +115,20 @@ th {
     background: #eef1f6;
 }
 
-.green { color: #0a8a3a; }
-.red { color: #c62828; }
+/* ================= COLORS ================= */
+
+.green {
+    color: #0a8a3a;
+}
+
+.red {
+    color: #c62828;
+}
 
 .delete {
     background: none;
     border: none;
     color: red;
     cursor: pointer;
+    font-size: 16px;
 }
