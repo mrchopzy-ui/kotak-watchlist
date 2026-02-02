@@ -1,49 +1,86 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Nexus Asset Management</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+body {
+    font-family: Inter, Arial, sans-serif;
+    margin: 0;
+    background: #f6f8fb;
+}
 
-<header class="top-bar">
-    <h1>Nexus Asset Management</h1>
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, #0b1c2d, #122b45);
+    color: white;
+    padding: 14px 40px;
+}
 
-    <div class="indices" id="indices"></div>
-</header>
+.indices {
+    display: flex;
+    gap: 12px;
+}
 
-<div class="tabs">
-    {% for t in tabs %}
-        <button class="tab {% if t == active %}active{% endif %}">
-            {{ t }}
-        </button>
-    {% endfor %}
-    <button class="tab add">+</button>
-</div>
+.index-card {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-align: right;
+    min-width: 110px;
+}
 
-<div class="search-box">
-    <input id="search" placeholder="Search stock symbol (e.g. ITC)" autocomplete="off">
-    <div id="suggestions"></div>
-</div>
+.index-card .name {
+    font-size: 11px;
+    opacity: 0.9;
+}
 
-<table>
-    <thead>
-        <tr>
-            <th>Symbol</th>
-            <th>Company</th>
-            <th>LTP</th>
-            <th>%</th>
-            <th>Volume</th>
-            <th>O</th>
-            <th>H</th>
-            <th>L</th>
-            <th>C</th>
-            <th>Delete</th>
-        </tr>
-    </thead>
-    <tbody id="watchlist"></tbody>
-</table>
+.index-card .price {
+    font-size: 16px;
+    font-weight: 600;
+}
 
-<script src="/static/app.js"></script>
-</body>
-</html>
+.tabs {
+    padding: 10px 40px;
+    background: white;
+}
+
+.tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: #0b1c2d;
+    color: white;
+}
+
+.search-box {
+    margin: 20px 40px;
+}
+
+table {
+    margin: 0 40px 40px;
+    width: calc(100% - 80px);
+    border-collapse: collapse;
+    background: white;
+}
+
+th, td {
+    padding: 8px;
+    text-align: center;
+    font-size: 13px;
+}
+
+th {
+    background: #eef1f6;
+}
+
+.green { color: #0a8a3a; }
+.red { color: #c62828; }
+
+.delete {
+    background: none;
+    border: none;
+    color: red;
+    cursor: pointer;
+}
