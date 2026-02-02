@@ -1,130 +1,47 @@
-from flask import Flask, render_template, jsonify, request
-import csv
-import os
-import requests
-import pyotp
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
-app = Flask(__name__)
+<header class="top-bar">
+    <h1>Nexus Asset Management</h1>
 
-# -------- ENV VARIABLES --------
-ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
-MOBILE = os.getenv("KOTAK_MOBILE")
-USER_ID = os.getenv("KOTAK_USER_ID")
-MPIN = os.getenv("KOTAK_MPIN")
-TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
+    <div class="indices" id="indices"></div>
+</header>
 
-DATA_FILE = "data/nse_eq_scrip_master.csv"
+<div class="tabs">
+    {% for t in tabs %}
+        <button class="tab {% if t == active %}active{% endif %}">{{ t }}</button>
+    {% endfor %}
+    <button class="tab add">+</button>
+</div>
 
-WATCHLISTS = {"Watchlist 1": []}
-ACTIVE_TAB = "Watchlist 1"
-SCRIPS = []
-SESSION = {}
+<div class="search-box">
+    <input id="search" placeholder="Search stock symbol (e.g. ITC)">
+    <div id="suggestions"></div>
+</div>
 
-# -------- INDICES --------
-INDICES = [
-    {"name": "NIFTY 50", "token": "Nifty 50"},
-    {"name": "NIFTY BANK", "token": "Nifty Bank"}
-]
+<table>
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Company</th>
+            <th>LTP</th>
+            <th>%</th>
+            <th>Volume</th>
+            <th>O</th>
+            <th>H</th>
+            <th>L</th>
+            <th>C</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody id="watchlist"></tbody>
+</table>
 
-# -------- LOGIN --------
-def login():
-    totp = pyotp.TOTP(TOTP_SECRET).now()
-
-    r1 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
-        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
-    ).json()
-
-    r2 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"]
-        },
-        json={"mpin": MPIN}
-    ).json()
-
-    SESSION["base"] = r2["data"]["baseUrl"]
-
-login()
-
-# -------- LOAD SCRIP MASTER --------
-with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
-    if not SCRIPS:
-        raise SystemExit("❌ Scrip master empty")
-
-# -------- ROUTES --------
-@app.route("/")
-def index():
-    return render_template("index.html", tabs=WATCHLISTS.keys(), active=ACTIVE_TAB)
-
-@app.route("/search")
-def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
-
-@app.route("/add", methods=["POST"])
-def add_stock():
-    stock = request.json
-    if stock not in WATCHLISTS[ACTIVE_TAB]:
-        WATCHLISTS[ACTIVE_TAB].append(stock)
-    return "", 204
-
-@app.route("/remove", methods=["POST"])
-def remove_stock():
-    sym = request.json["trading_symbol"]
-    WATCHLISTS[ACTIVE_TAB] = [s for s in WATCHLISTS[ACTIVE_TAB] if s["trading_symbol"] != sym]
-    return "", 204
-
-# -------- STOCK PRICES --------
-@app.route("/prices")
-def prices():
-    if not WATCHLISTS[ACTIVE_TAB]:
-        return jsonify([])
-
-    queries = ",".join(f"nse_cm|{s['exchange_token']}" for s in WATCHLISTS[ACTIVE_TAB])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
-
-    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-    out = []
-
-    for q, s in zip(data, WATCHLISTS[ACTIVE_TAB]):
-        o = q.get("ohlc", {})
-        out.append({
-            "symbol": s["trading_symbol"],
-            "company": s["company_name"],
-            "ltp": float(q.get("ltp", 0)),
-            "change_pct": float(q.get("per_change", 0)),
-            "volume": int(q.get("last_volume", 0)),
-            "open": float(o.get("open", 0)),
-            "high": float(o.get("high", 0)),
-            "low": float(o.get("low", 0)),
-            "close": float(o.get("close", 0))
-        })
-
-    return jsonify(out)
-
-# -------- INDICES PRICES --------
-@app.route("/indices")
-def indices():
-    queries = ",".join(f"nse_cm|{i['token']}" for i in INDICES)
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
-
-    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-    out = []
-
-    for q, i in zip(data, INDICES):
-        out.append({
-            "name": i["name"],
-            "ltp": float(q.get("ltp", 0)),
-            "change_pct": float(q.get("per_change", 0))
-        })
-
-    return jsonify(out)
-
-if __name__ == "__main__":
-    app.run()
+<script src="/static/app.js"></script>
+</body>
+</html>
