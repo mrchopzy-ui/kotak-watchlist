@@ -95,3 +95,5 @@ async function removeStock(symbol) {
 
 setInterval(loadPrices, 5000);
 loadPrices();
+
+<td>${s.volume}</td>
