@@ -6,18 +6,17 @@
 </head>
 <body>
 
-<header class="header">
+<header class="top-bar">
     <h1>Nexus Asset Management</h1>
 </header>
 
 <div class="tabs">
     {% for t in tabs %}
-        <button class="tab {{ 'active' if t == active else '' }}"
-                onclick="switchTab('{{ t }}')">
+        <button class="tab {% if t == active %}active{% endif %}">
             {{ t }}
         </button>
     {% endfor %}
-    <button class="tab add-tab" onclick="createTab()">＋</button>
+    <button class="tab add">+</button>
 </div>
 
 <div class="search-box">
@@ -32,6 +31,7 @@
             <th onclick="sortBy('company')">Company</th>
             <th onclick="sortBy('ltp')">LTP</th>
             <th onclick="sortBy('change_pct')">%</th>
+            <th onclick="sortBy('volume')">Volume</th> <!-- ✅ FIX -->
             <th onclick="sortBy('open')">O</th>
             <th onclick="sortBy('high')">H</th>
             <th onclick="sortBy('low')">L</th>
@@ -45,5 +45,3 @@
 <script src="/static/app.js"></script>
 </body>
 </html>
-
-<th onclick="sortBy('volume')">Volume</th>
