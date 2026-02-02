@@ -1,6 +1,6 @@
+const tbody = document.getElementById("watchlist");
+const indicesDiv = document.getElementById("indices");
 let lastData = [];
-let sortColumn = null;
-let sortAsc = true;
 
 function formatVolume(v) {
     if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
@@ -9,22 +9,34 @@ function formatVolume(v) {
     return "-";
 }
 
-function sortBy(col) {
-    sortAsc = sortColumn === col ? !sortAsc : true;
-    sortColumn = col;
+async function loadIndices() {
+    const res = await fetch("/indices");
+    const data = await res.json();
+
+    indicesDiv.innerHTML = "";
+    data.forEach(i => {
+        indicesDiv.innerHTML += `
+            <div class="index-card">
+                <div class="name">${i.name}</div>
+                <div class="price">${i.price.toFixed(2)}</div>
+                <div class="pct ${i.pct >= 0 ? 'green' : 'red'}">
+                    ${i.pct.toFixed(2)}%
+                </div>
+            </div>
+        `;
+    });
+}
+
+async function loadPrices() {
+    const res = await fetch("/prices");
+    lastData = await res.json();
     render();
 }
 
 function render() {
-    let data = [...lastData];
-    if (sortColumn) {
-        data.sort((a, b) =>
-            sortAsc ? a[sortColumn] - b[sortColumn] : b[sortColumn] - a[sortColumn]
-        );
-    }
-
-    document.getElementById("watchlist").innerHTML =
-        data.map(s => `
+    tbody.innerHTML = "";
+    lastData.forEach(s => {
+        tbody.innerHTML += `
         <tr>
             <td>${s.symbol}</td>
             <td>${s.company}</td>
@@ -35,32 +47,12 @@ function render() {
             <td>${s.high.toFixed(2)}</td>
             <td>${s.low.toFixed(2)}</td>
             <td>${s.close.toFixed(2)}</td>
-            <td><button class="delete" onclick="removeStock('${s.symbol}')">✕</button></td>
-        </tr>`).join("");
+            <td><button class="delete">✕</button></td>
+        </tr>`;
+    });
 }
 
-async function loadPrices() {
-    lastData = await (await fetch("/prices")).json();
-    render();
-}
-
-async function loadIndices() {
-    const data = await (await fetch("/indices")).json();
-    document.getElementById("indices").innerHTML =
-        data.map(i => `
-        <div class="index-card">
-            <div>${i.name}</div>
-            <strong>${i.ltp.toFixed(2)}</strong>
-            <span class="${i.change_pct >= 0 ? 'green' : 'red'}">
-                ${i.change_pct.toFixed(2)}%
-            </span>
-        </div>`).join("");
-}
-
-setInterval(() => {
-    loadPrices();
-    loadIndices();
-}, 5000);
-
+setInterval(loadPrices, 5000);
+setInterval(loadIndices, 5000);
 loadPrices();
 loadIndices();
