@@ -8,6 +8,8 @@
 
 <header class="top-bar">
     <h1>Nexus Asset Management</h1>
+
+    <div class="indices" id="indices"></div>
 </header>
 
 <div class="tabs">
@@ -27,15 +29,15 @@
 <table>
     <thead>
         <tr>
-            <th onclick="sortBy('symbol')">Symbol</th>
-            <th onclick="sortBy('company')">Company</th>
-            <th onclick="sortBy('ltp')">LTP</th>
-            <th onclick="sortBy('change_pct')">%</th>
-            <th onclick="sortBy('volume')">Volume</th> <!-- ✅ FIX -->
-            <th onclick="sortBy('open')">O</th>
-            <th onclick="sortBy('high')">H</th>
-            <th onclick="sortBy('low')">L</th>
-            <th onclick="sortBy('close')">C</th>
+            <th>Symbol</th>
+            <th>Company</th>
+            <th>LTP</th>
+            <th>%</th>
+            <th>Volume</th>
+            <th>O</th>
+            <th>H</th>
+            <th>L</th>
+            <th>C</th>
             <th>Delete</th>
         </tr>
     </thead>
