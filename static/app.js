@@ -1,7 +1,32 @@
+const tabs = document.querySelectorAll(".tab[data-id]");
+const tbody = document.getElementById("watchlist");
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
-const tbody = document.getElementById("watchlist");
 
+let activeWatchlist = tabs[0].dataset.id;
+
+/* ---------- TAB SWITCH ---------- */
+tabs.forEach(tab => {
+    tab.onclick = () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeWatchlist = tab.dataset.id;
+        loadPrices();
+    };
+
+    tab.ondblclick = async () => {
+        const name = prompt("Rename watchlist:", tab.innerText);
+        if (!name) return;
+        await fetch(`/watchlist/${tab.dataset.id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name})
+        });
+        location.reload();
+    };
+});
+
+/* ---------- SEARCH ---------- */
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
@@ -14,7 +39,7 @@ search.addEventListener("input", async () => {
         d.className = "suggestion-item";
         d.innerText = s.trading_symbol;
         d.onclick = async () => {
-            await fetch("/add", {
+            await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(s)
@@ -27,21 +52,12 @@ search.addEventListener("input", async () => {
     });
 });
 
-async function newWatchlist() {
-    const name = prompt("Watchlist name:");
-    if (!name) return;
-    await fetch("/watchlist", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name})
-    });
-    location.reload();
-}
-
+/* ---------- PRICES ---------- */
 async function loadPrices() {
-    const res = await fetch("/prices");
+    const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
     tbody.innerHTML = "";
+
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
@@ -60,7 +76,7 @@ async function loadPrices() {
 }
 
 async function removeStock(sym) {
-    await fetch("/remove", {
+    await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
@@ -68,5 +84,4 @@ async function removeStock(sym) {
     loadPrices();
 }
 
-setInterval(loadPrices, 5000);
 loadPrices();
