@@ -1,101 +1,72 @@
-const tbody = document.getElementById("watchlist");
-const indicesDiv = document.getElementById("indices");
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
+const tbody = document.getElementById("watchlist");
 
-let lastData = [];
-
-/* ---------- VOLUME FORMAT ---------- */
-function formatVolume(v) {
-    if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
-    if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
-    if (v >= 1e3) return (v / 1e3).toFixed(2) + "K";
-    return "-";
-}
-
-/* ---------- SEARCH + SUGGESTIONS (FIX) ---------- */
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
-    const q = search.value.trim();
-    if (!q) return;
+    if (!search.value) return;
 
-    const res = await fetch(`/search?q=${q}`);
+    const res = await fetch(`/search?q=${search.value}`);
     const data = await res.json();
 
-    data.forEach(stock => {
-        const div = document.createElement("div");
-        div.className = "suggestion-item";
-        div.innerHTML = `<strong>${stock.trading_symbol}</strong>`;
-
-        div.onclick = async () => {
+    data.forEach(s => {
+        const d = document.createElement("div");
+        d.className = "suggestion-item";
+        d.innerText = s.trading_symbol;
+        d.onclick = async () => {
             await fetch("/add", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(stock)
+                body: JSON.stringify(s)
             });
             search.value = "";
             suggestions.innerHTML = "";
             loadPrices();
         };
-
-        suggestions.appendChild(div);
+        suggestions.appendChild(d);
     });
 });
 
-/* ---------- INDICES ---------- */
-async function loadIndices() {
-    const res = await fetch("/indices");
-    const data = await res.json();
-
-    indicesDiv.innerHTML = "";
-    data.forEach(i => {
-        indicesDiv.innerHTML += `
-            <div class="index-card">
-                <div class="name">${i.name}</div>
-                <div class="price">${i.price.toFixed(2)}</div>
-                <div class="pct ${i.pct >= 0 ? 'green' : 'red'}">
-                    ${i.pct.toFixed(2)}%
-                </div>
-            </div>
-        `;
+async function newWatchlist() {
+    const name = prompt("Watchlist name:");
+    if (!name) return;
+    await fetch("/watchlist", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name})
     });
+    location.reload();
 }
 
-/* ---------- WATCHLIST ---------- */
 async function loadPrices() {
     const res = await fetch("/prices");
-    lastData = await res.json();
-    render();
-}
-
-function render() {
+    const data = await res.json();
     tbody.innerHTML = "";
-    lastData.forEach(s => {
+    data.forEach(s => {
         tbody.innerHTML += `
         <tr>
             <td>${s.symbol}</td>
             <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
-            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
-                ${s.change_pct.toFixed(2)}%
-            </td>
-            <td>${formatVolume(s.volume)}</td>
-            <td>${s.open.toFixed(2)}</td>
-            <td>${s.high.toFixed(2)}</td>
-            <td>${s.low.toFixed(2)}</td>
-            <td>${s.close.toFixed(2)}</td>
-            <td>
-                <button class="delete" onclick="removeStock('${s.symbol}')">✕</button>
-            </td>
+            <td>${s.change_pct.toFixed(2)}%</td>
+            <td>${s.volume}</td>
+            <td>${s.open}</td>
+            <td>${s.high}</td>
+            <td>${s.low}</td>
+            <td>${s.close}</td>
+            <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
         </tr>`;
     });
 }
 
-async function removeStock(symbol) {
+async function removeStock(sym) {
     await fetch("/remove", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({trading_symbol: symbol})
+        body: JSON.stringify({trading_symbol: sym})
     });
     loadPrices();
 }
+
+setInterval(loadPrices, 5000);
+loadPrices();
