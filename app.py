@@ -1,134 +1,128 @@
-body {
-    font-family: Inter, Arial, sans-serif;
-    margin: 0;
-    background: #f6f8fb;
-}
+from flask import Flask, render_template, jsonify, request
+import csv
+import os
+import requests
+import pyotp
 
-/* ================= HEADER ================= */
+app = Flask(__name__)
 
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(90deg, #0b1c2d, #122b45);
-    color: white;
-    padding: 14px 40px;
-}
+# -------- ENV VARIABLES --------
+ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
+MOBILE = os.getenv("KOTAK_MOBILE")
+USER_ID = os.getenv("KOTAK_USER_ID")
+MPIN = os.getenv("KOTAK_MPIN")
+TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-.indices {
-    display: flex;
-    gap: 12px;
-}
+DATA_FILE = "data/nse_eq_scrip_master.csv"
 
-.index-card {
-    background: rgba(255,255,255,0.15);
-    padding: 8px 14px;
-    border-radius: 8px;
-    text-align: right;
-    min-width: 110px;
-}
+WATCHLISTS = {"Watchlist 1": []}
+ACTIVE_TAB = "Watchlist 1"
+SCRIPS = []
+SESSION = {}
 
-.index-card .name {
-    font-size: 11px;
-    opacity: 0.9;
-}
+# -------- INDICES --------
+INDICES = [
+    {"name": "NIFTY 50", "token": "Nifty 50"},
+    {"name": "NIFTY BANK", "token": "Nifty Bank"}
+]
 
-.index-card .price {
-    font-size: 16px;
-    font-weight: 600;
-}
+# -------- LOGIN --------
+def login():
+    totp = pyotp.TOTP(TOTP_SECRET).now()
 
-/* ================= TABS ================= */
+    r1 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
+        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
+    ).json()
 
-.tabs {
-    padding: 10px 40px;
-    background: white;
-}
+    r2 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
+        headers={
+            "Authorization": ACCESS_TOKEN,
+            "neo-fin-key": "neotradeapi",
+            "sid": r1["data"]["sid"],
+            "Auth": r1["data"]["token"]
+        },
+        json={"mpin": MPIN}
+    ).json()
 
-.tab {
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: none;
-    margin-right: 6px;
-    cursor: pointer;
-}
+    SESSION["base"] = r2["data"]["baseUrl"]
 
-.tab.active {
-    background: #0b1c2d;
-    color: white;
-}
+login()
 
-/* ================= SEARCH (IMPORTANT FIX) ================= */
+# -------- LOAD SCRIP MASTER --------
+def load_scrip_master():
+    global SCRIPS
+    with open(DATA_FILE, newline="", encoding="utf-8") as f:
+        SCRIPS = list(csv.DictReader(f))
+    if not SCRIPS:
+        raise SystemExit("❌ Local scrip master empty")
 
-.search-box {
-    position: relative;          /* 🔑 REQUIRED */
-    margin: 20px 40px;
-    width: 300px;
-}
+load_scrip_master()
 
-#search {
-    width: 100%;
-    padding: 8px;
-    font-size: 13px;
-}
+# -------- ROUTES --------
+@app.route("/")
+def index():
+    return render_template("index.html", tabs=WATCHLISTS.keys(), active=ACTIVE_TAB)
 
-/* 🔑 DROPDOWN VISIBILITY */
-#suggestions {
-    position: absolute;
-    top: 36px;
-    left: 0;
-    width: 100%;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    z-index: 9999;               /* 🔑 REQUIRED */
-    max-height: 260px;
-    overflow-y: auto;
-}
+@app.route("/search")
+def search():
+    q = request.args.get("q", "").lower()
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
-.suggestion-item {
-    padding: 8px 10px;
-    cursor: pointer;
-    font-size: 13px;
-}
+@app.route("/add", methods=["POST"])
+def add_stock():
+    stock = request.json
+    if stock not in WATCHLISTS[ACTIVE_TAB]:
+        WATCHLISTS[ACTIVE_TAB].append(stock)
+    return "", 204
 
-.suggestion-item:hover {
-    background: #eef3ff;
-}
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    sym = request.json["trading_symbol"]
+    WATCHLISTS[ACTIVE_TAB] = [s for s in WATCHLISTS[ACTIVE_TAB] if s["trading_symbol"] != sym]
+    return "", 204
 
-/* ================= TABLE ================= */
+@app.route("/prices")
+def prices():
+    queries = [f"nse_cm|{s['exchange_token']}" for s in WATCHLISTS[ACTIVE_TAB]]
+    if not queries:
+        return jsonify([])
 
-table {
-    margin: 0 40px 40px;
-    width: calc(100% - 80px);
-    border-collapse: collapse;
-    background: white;
-}
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{','.join(queries)}/all"
+    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
-th, td {
-    padding: 8px;
-    text-align: center;
-    font-size: 13px;
-}
+    out = []
+    for q, s in zip(data, WATCHLISTS[ACTIVE_TAB]):
+        ohlc = q.get("ohlc", {})
+        out.append({
+            "symbol": s["trading_symbol"],
+            "company": s["company_name"],
+            "ltp": float(q.get("ltp", 0)),
+            "change_pct": float(q.get("per_change", 0)),
+            "volume": int(q.get("last_volume", 0)),
+            "open": float(ohlc.get("open", 0)),
+            "high": float(ohlc.get("high", 0)),
+            "low": float(ohlc.get("low", 0)),
+            "close": float(ohlc.get("close", 0))
+        })
+    return jsonify(out)
 
-th {
-    background: #eef1f6;
-}
+@app.route("/indices")
+def indices():
+    queries = ",".join([f"nse_cm|{i['token']}" for i in INDICES])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/ltp"
+    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
-/* ================= COLORS ================= */
+    out = []
+    for q, i in zip(data, INDICES):
+        out.append({
+            "name": i["name"],
+            "price": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0))
+        })
+    return jsonify(out)
 
-.green {
-    color: #0a8a3a;
-}
-
-.red {
-    color: #c62828;
-}
-
-.delete {
-    background: none;
-    border: none;
-    color: red;
-    cursor: pointer;
-    font-size: 16px;
-}
+if __name__ == "__main__":
+    app.run()
