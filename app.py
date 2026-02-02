@@ -6,8 +6,7 @@ import pyotp
 
 app = Flask(__name__)
 
-# ---------------- ENV VARIABLES ----------------
-
+# -------- ENV VARIABLES --------
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
@@ -21,10 +20,24 @@ ACTIVE_TAB = "Watchlist 1"
 SCRIPS = []
 SESSION = {}
 
-# ---------------- LOGIN ----------------
+# -------- INDICES (STATIC) --------
+INDICES = [
+    {
+        "type": "INDEX",
+        "symbol": "NIFTY 50",
+        "company_name": "NIFTY 50",
+        "exchange_token": "Nifty 50"
+    },
+    {
+        "type": "INDEX",
+        "symbol": "NIFTY BANK",
+        "company_name": "NIFTY BANK",
+        "exchange_token": "Nifty Bank"
+    }
+]
 
+# -------- LOGIN --------
 def login():
-    print("🔐 Logging in to Kotak...")
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
     r1 = requests.post(
@@ -52,29 +65,21 @@ def login():
     ).json()
 
     SESSION["base"] = r2["data"]["baseUrl"]
-    SESSION["sid"] = r2["data"]["sid"]
-    SESSION["token"] = r2["data"]["token"]
 
 login()
 
-# ---------------- LOAD SCRIP MASTER ----------------
-
+# -------- LOAD SCRIP MASTER --------
 def load_scrip_master():
     global SCRIPS
-    print("📂 Loading LOCAL scrip master...")
-
     with open(DATA_FILE, newline="", encoding="utf-8") as f:
         SCRIPS = list(csv.DictReader(f))
 
     if not SCRIPS:
-        raise SystemExit("❌ Local scrip master is empty")
-
-    print(f"✅ Loaded {len(SCRIPS)} EQ stocks")
+        raise SystemExit("❌ Local scrip master empty")
 
 load_scrip_master()
 
-# ---------------- ROUTES ----------------
-
+# -------- ROUTES --------
 @app.route("/")
 def index():
     return render_template(
@@ -87,8 +92,7 @@ def index():
 def search():
     q = request.args.get("q", "").lower()
     return jsonify([
-        s for s in SCRIPS
-        if q in s["trading_symbol"].lower()
+        s for s in SCRIPS if q in s["trading_symbol"].lower()
     ][:10])
 
 @app.route("/add", methods=["POST"])
@@ -107,40 +111,37 @@ def remove_stock():
     ]
     return "", 204
 
-# ---------------- LIVE PRICES + VOLUME ----------------
-
+# -------- PRICES (STOCKS + INDICES) --------
 @app.route("/prices")
 def prices():
-    if not WATCHLISTS[ACTIVE_TAB]:
-        return jsonify([])
+    items = INDICES + WATCHLISTS[ACTIVE_TAB]
 
-    queries = ",".join(
-        f"nse_cm|{s['exchange_token']}"
-        for s in WATCHLISTS[ACTIVE_TAB]
-    )
+    queries = []
+    for i in items:
+        if i.get("type") == "INDEX":
+            queries.append(f"nse_cm|{i['exchange_token']}")
+        else:
+            queries.append(f"nse_cm|{i['exchange_token']}")
 
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{','.join(queries)}/all"
 
-    resp = requests.get(
-        url,
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
+    resp = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-
-    for q, s in zip(resp, WATCHLISTS[ACTIVE_TAB]):
+    for q, i in zip(resp, items):
         ohlc = q.get("ohlc", {})
 
         out.append({
-            "symbol": s["trading_symbol"],
-            "company": s["company_name"],
+            "symbol": i["symbol"] if i.get("type") == "INDEX" else i["trading_symbol"],
+            "company": i["company_name"],
             "ltp": float(q.get("ltp", 0)),
             "change_pct": float(q.get("per_change", 0)),
-            "volume": int(q.get("last_volume", 0)),  # REAL VOLUME
+            "volume": int(q.get("last_volume", 0)),
             "open": float(ohlc.get("open", 0)),
             "high": float(ohlc.get("high", 0)),
             "low": float(ohlc.get("low", 0)),
-            "close": float(ohlc.get("close", 0))
+            "close": float(ohlc.get("close", 0)),
+            "is_index": i.get("type") == "INDEX"
         })
 
     return jsonify(out)
