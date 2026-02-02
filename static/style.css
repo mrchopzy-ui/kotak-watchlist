@@ -1,85 +1,49 @@
 body {
     margin: 0;
-    font-family: Inter, Arial, sans-serif;
+    font-family: Arial;
     background: #f4f6f9;
 }
 
 .top-bar {
-    background: linear-gradient(90deg, #0b1c2d, #122b45);
+    background: #0b1c2d;
     color: white;
-    padding: 14px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.indices {
-    display: flex;
-    gap: 16px;
-}
-
-.index-card {
-    background: rgba(255,255,255,0.1);
-    padding: 8px 14px;
-    border-radius: 6px;
-    text-align: right;
-    min-width: 110px;
-}
-
-.index-card .name {
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.index-card .price {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.index-card .pct {
-    font-size: 12px;
+    padding: 15px 30px;
 }
 
 .tabs {
-    padding: 10px 30px;
     background: white;
+    padding: 10px 30px;
 }
 
 .tab {
     padding: 6px 14px;
     margin-right: 6px;
+    border-radius: 6px;
     border: none;
     background: #e9ecf1;
-    border-radius: 6px;
     cursor: pointer;
 }
 
-.tab.active {
-    background: #0b1c2d;
-    color: white;
+.tab.add {
+    font-weight: bold;
 }
 
 .search-box {
-    position: relative;
     margin: 20px 30px;
+    position: relative;
     width: 300px;
 }
 
 #search {
     width: 100%;
     padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
 }
 
 #suggestions {
     position: absolute;
-    width: 100%;
     background: white;
+    width: 100%;
     border: 1px solid #ccc;
-    border-radius: 6px;
-    margin-top: 4px;
-    z-index: 100;
 }
 
 .suggestion-item {
@@ -87,39 +51,14 @@ body {
     cursor: pointer;
 }
 
-.suggestion-item:hover {
-    background: #eef3ff;
-}
-
 table {
-    width: calc(100% - 60px);
     margin: 0 30px 30px;
+    width: calc(100% - 60px);
     background: white;
     border-collapse: collapse;
-    border-radius: 8px;
-    overflow: hidden;
 }
 
 th, td {
     padding: 10px;
     text-align: center;
-    font-size: 13px;
 }
-
-th {
-    background: #f1f3f6;
-}
-
-tr:hover {
-    background: #f8fafc;
-}
-
-.delete {
-    background: none;
-    border: none;
-    color: #d11a2a;
-    cursor: pointer;
-}
-
-.green { color: #0a8a3a; }
-.red { color: #c62828; }
