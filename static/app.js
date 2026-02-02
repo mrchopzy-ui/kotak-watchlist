@@ -1,94 +1,57 @@
-let sortColumn = null;
-let sortAsc = true;
 let lastData = [];
+let sortCol = null;
+let asc = true;
 
-const search = document.getElementById("search");
-const suggestions = document.getElementById("suggestions");
-const tbody = document.getElementById("watchlist");
-
-/* ---------- SEARCH (SYMBOL ONLY) ---------- */
-
-search.addEventListener("input", async () => {
-    suggestions.innerHTML = "";
-    if (!search.value) return;
-
-    const res = await fetch(`/search?q=${search.value}`);
-    const data = await res.json();
-
-    data.forEach(stock => {
-        const div = document.createElement("div");
-        div.className = "suggestion-item";
-        div.innerHTML = `<strong>${stock.trading_symbol}</strong>`;
-
-        div.onclick = async () => {
-            await fetch("/add", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(stock)
-            });
-            search.value = "";
-            suggestions.innerHTML = "";
-            loadPrices();
-        };
-
-        suggestions.appendChild(div);
-    });
-});
-
-/* ---------- SORT ---------- */
-
-function sortBy(col) {
-    sortAsc = sortColumn === col ? !sortAsc : true;
-    sortColumn = col;
-    renderTable();
+function fmtVol(v) {
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
+    if (v >= 1e3) return (v / 1e3).toFixed(2) + "K";
+    return v;
 }
 
-/* ---------- TABLE ---------- */
+function sortBy(c) {
+    asc = sortCol === c ? !asc : true;
+    sortCol = c;
+    render();
+}
 
-function renderTable() {
-    let data = [...lastData];
-
-    if (sortColumn) {
-        data.sort((a, b) => {
-            let x = a[sortColumn];
-            let y = b[sortColumn];
-            return sortAsc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
-        });
+function render() {
+    let d = [...lastData];
+    if (sortCol) {
+        d.sort((a, b) => asc ? a[sortCol] - b[sortCol] : b[sortCol] - a[sortCol]);
     }
 
+    const tbody = document.getElementById("watchlist");
     tbody.innerHTML = "";
 
-    data.forEach(s => {
+    d.forEach(s => {
         tbody.innerHTML += `
         <tr>
-            <td class="link">${s.symbol}</td>
+            <td>${s.symbol}</td>
             <td class="company">${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
-            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">
-                ${s.change_pct.toFixed(2)}%
-            </td>
+            <td class="${s.change_pct >= 0 ? 'green' : 'red'}">${s.change_pct.toFixed(2)}%</td>
             <td>${s.open.toFixed(2)}</td>
             <td>${s.high.toFixed(2)}</td>
             <td>${s.low.toFixed(2)}</td>
             <td>${s.close.toFixed(2)}</td>
-            <td>
-                <button class="delete" onclick="removeStock('${s.symbol}')">✕</button>
-            </td>
+            <td>${fmtVol(s.volume)}</td>
+            <td><button class="delete" onclick="removeStock('${s.symbol}')">✕</button></td>
         </tr>`;
     });
 }
 
 async function loadPrices() {
-    const res = await fetch("/prices");
-    lastData = await res.json();
-    renderTable();
+    const r = await fetch("/prices");
+    lastData = await r.json();
+    render();
 }
 
-async function removeStock(symbol) {
+async function removeStock(sym) {
     await fetch("/remove", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({trading_symbol: symbol})
+        body: JSON.stringify({trading_symbol: sym})
     });
     loadPrices();
 }
