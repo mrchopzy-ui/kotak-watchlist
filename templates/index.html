@@ -13,6 +13,7 @@
 <div class="tabs">
     {% for t in tabs %}
         <button class="tab {{ 'active' if t == active else '' }}"
+                ondblclick="editTab(this, '{{ t }}')"
                 onclick="switchTab('{{ t }}')">
             {{ t }}
         </button>
@@ -21,7 +22,7 @@
 </div>
 
 <div class="search-box">
-    <input id="search" placeholder="Search stock symbol (e.g. ITC)" autocomplete="off">
+    <input id="search" placeholder="Type stock symbol (ITC)" autocomplete="off">
     <div id="suggestions"></div>
 </div>
 
@@ -32,10 +33,7 @@
             <th onclick="sortBy('company')">Company</th>
             <th onclick="sortBy('ltp')">LTP</th>
             <th onclick="sortBy('change_pct')">%</th>
-            <th onclick="sortBy('open')">O</th>
-            <th onclick="sortBy('high')">H</th>
-            <th onclick="sortBy('low')">L</th>
-            <th onclick="sortBy('close')">C</th>
+            <th>O</th><th>H</th><th>L</th><th>C</th>
             <th>Delete</th>
         </tr>
     </thead>
