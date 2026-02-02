@@ -24,6 +24,11 @@ body {
     cursor: pointer;
 }
 
+.tab.active {
+    background: #0b1c2d;
+    color: white;
+}
+
 .tab.add {
     font-weight: bold;
 }
@@ -44,6 +49,7 @@ body {
     background: white;
     width: 100%;
     border: 1px solid #ccc;
+    z-index: 10;
 }
 
 .suggestion-item {
