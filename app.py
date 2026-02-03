@@ -14,12 +14,10 @@ DB_FILE = "watchlists.db"
 
 SESSION = {}
 SCRIPS = []
-SCRIP_LOOKUP = {}
 
 def db():
     return sqlite3.connect(DB_FILE)
 
-# ---------------- INIT DB ----------------
 def init_db():
     con = db()
     cur = con.cursor()
@@ -44,7 +42,6 @@ def init_db():
 
 init_db()
 
-# ---------------- LOGIN ----------------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
     r1 = requests.post(
@@ -68,30 +65,28 @@ def login():
 
 login()
 
-# ---------------- LOAD SCRIP MASTER ----------------
+# ---------- LOAD SCRIP MASTER ----------
 with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
-    for s in SCRIPS:
-        SCRIP_LOOKUP[s["trading_symbol"]] = s["company_name"]
+    for r in csv.DictReader(f):
+        SCRIPS.append({
+            "trading_symbol": r["trading_symbol"],
+            "company_name": r["company_name"].strip(),
+            "exchange_token": r["exchange_token"]
+        })
 
-# ---------------- HELPERS ----------------
 def format_volume(v):
     v = float(v)
-    if v >= 1_000_000_000:
-        return f"{v/1_000_000_000:.2f}B"
-    if v >= 1_000_000:
-        return f"{v/1_000_000:.2f}M"
-    if v >= 1_000:
-        return f"{v/1_000:.2f}K"
+    if v >= 1_000_000_000: return f"{v/1e9:.2f}B"
+    if v >= 1_000_000: return f"{v/1e6:.2f}M"
+    if v >= 1_000: return f"{v/1e3:.2f}K"
     return str(int(v))
 
-# ---------------- ROUTES ----------------
 @app.route("/")
 def index():
     con = db()
-    w = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
+    wl = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
     con.close()
-    return render_template("index.html", watchlists=w)
+    return render_template("index.html", watchlists=wl)
 
 @app.route("/search")
 def search():
@@ -102,25 +97,19 @@ def search():
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
-
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
         VALUES (?, ?, ?, ?)
-    """, (
-        wid,
-        s["trading_symbol"],
-        s["company_name"],
-        s["exchange_token"]
-    ))
+    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
-    sym = request.json["trading_symbol"]
     wid = request.args.get("wid")
+    sym = request.json["trading_symbol"]
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
@@ -143,22 +132,16 @@ def prices():
     if not rows:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{r[2]}" for r in rows])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    qs = ",".join([f"nse_cm|{r[2]}" for r in rows])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{qs}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
     for q, r in zip(data, rows):
-        symbol, cname, token = r
-
-        # 🔧 FIX: fallback to CSV lookup
-        if not cname:
-            cname = SCRIP_LOOKUP.get(symbol, symbol)
-
         o = q.get("ohlc", {})
         out.append({
-            "symbol": symbol,
-            "company_name": cname,
+            "symbol": r[0],
+            "company_name": r[1],
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
@@ -167,7 +150,6 @@ def prices():
             "low": o.get("low", 0),
             "close": o.get("close", 0)
         })
-
     return jsonify(out)
 
 if __name__ == "__main__":
