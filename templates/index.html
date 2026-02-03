@@ -1,45 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Nexus Asset Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Asset Management | Stock Watchlist</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <header>
+        <div class="header-left">
+            <h1>NEXUS ASSET MANAGEMENT</h1>
+        </div>
+        <div id="indices-bar" class="indices-container">
+            <!-- Indices loaded via JS -->
+        </div>
+    </header>
 
-<header class="top-bar">
-    <h1>Nexus Asset Management</h1>
-</header>
+    <main>
+        <div class="search-container">
+            <input type="text" id="stock-search" placeholder="Search Stock (e.g. RELIANCE)..." autocomplete="off">
+            <div id="search-results" class="autocomplete-items"></div>
+        </div>
 
-<div class="tabs">
-    {% for w in watchlists %}
-        <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
-    {% endfor %}
-    <button class="tab add" id="addWatchlist">+</button>
-</div>
+        <div class="watchlist-tabs-container">
+            <div id="watchlist-tabs" class="tabs"></div>
+            <button id="add-watchlist-btn" class="btn-add">+</button>
+        </div>
 
-<div class="search-box">
-    <input id="search" placeholder="Type stock symbol">
-    <div id="suggestions"></div>
-</div>
+        <div class="table-wrapper">
+            <table id="stock-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Symbol ↕</th>
+                        <th onclick="sortTable(1)">Company ↕</th>
+                        <th onclick="sortTable(2)">LTP ↕</th>
+                        <th onclick="sortTable(3)">% Change ↕</th>
+                        <th onclick="sortTable(4)">Volume ↕</th>
+                        <th onclick="sortTable(5)">Open ↕</th>
+                        <th onclick="sortTable(6)">High ↕</th>
+                        <th onclick="sortTable(7)">Low ↕</th>
+                        <th onclick="sortTable(8)">Close ↕</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="stock-list-body">
+                    <!-- Stocks load here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
 
-<table>
-    <thead>
-        <tr>
-            <th>Symbol</th>
-            <th>Company</th>
-            <th>LTP</th>
-            <th>%</th>
-            <th>Volume</th>
-            <th>Open</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Close</th>
-            <th>Delete</th>
-        </tr>
-    </thead>
-    <tbody id="watchlist"></tbody>
-</table>
-
-<script src="/static/app.js"></script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
