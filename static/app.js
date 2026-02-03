@@ -25,7 +25,6 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.onclick = () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-
         activeWatchlist = tab.dataset.id;
         startPriceRefresh();
     };
@@ -81,8 +80,10 @@ async function loadPrices() {
     tbody.innerHTML = "";
 
     data.forEach(s => {
+        const symbolOnly = s.symbol.replace("-EQ", "");
+
         tbody.innerHTML += `
-        <tr>
+        <tr class="row-click" onclick="openChart('${symbolOnly}')">
             <td>${s.symbol}</td>
             <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -93,23 +94,25 @@ async function loadPrices() {
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="removeStock('${s.symbol}')">✕</button>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">
+                    ✕
+                </button>
             </td>
         </tr>`;
     });
 }
 
+/* ---------- OPEN TRADINGVIEW ---------- */
+function openChart(symbol) {
+    const url = `https://www.tradingview.com/chart/?symbol=NSE:${symbol}`;
+    window.open(url, "_blank");
+}
+
 /* ---------- AUTO REFRESH ---------- */
 function startPriceRefresh() {
-    if (priceTimer) {
-        clearInterval(priceTimer);
-    }
-
-    loadPrices(); // immediate fetch
-
-    priceTimer = setInterval(() => {
-        loadPrices();
-    }, 5000); // every 5 seconds
+    if (priceTimer) clearInterval(priceTimer);
+    loadPrices();
+    priceTimer = setInterval(loadPrices, 5000);
 }
 
 /* ---------- REMOVE STOCK ---------- */
@@ -119,7 +122,6 @@ async function removeStock(sym) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
-
     loadPrices();
 }
 
