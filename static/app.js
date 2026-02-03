@@ -52,13 +52,18 @@ search.addEventListener("input", async () => {
     data.forEach(s => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
+        // show trading symbol in suggestion (user asked for symbol-only)
         d.innerText = s.trading_symbol;
 
         d.onclick = async () => {
+            // send minimal info; server will fill company_name if needed
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(s)
+                body: JSON.stringify({
+                    trading_symbol: s.trading_symbol,
+                    exchange_token: s.exchange_token
+                })
             });
             search.value = "";
             suggestions.innerHTML = "";
@@ -81,9 +86,9 @@ async function loadPrices() {
         tbody.innerHTML += `
         <tr onclick="openChart('${tvSymbol}')">
             <td>${s.symbol}</td>
-            <td>${s.company_name}</td>
-            <td>${s.ltp.toFixed(2)}</td>
-            <td>${s.pct.toFixed(2)}%</td>
+            <td>${s.company_name || ''}</td>
+            <td>${Number(s.ltp).toFixed(2)}</td>
+            <td>${Number(s.pct).toFixed(2)}%</td>
             <td>${s.volume}</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
