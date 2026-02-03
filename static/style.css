@@ -1,45 +1,84 @@
 body {
-  font-family: Inter, sans-serif;
-  background: #0e1117;
-  color: #e5e7eb;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
 }
 
-header {
-  padding: 20px;
-  font-size: 22px;
+.top-bar {
+    background: #0b1c2d;
+    color: white;
+    padding: 15px 30px;
 }
 
-.controls {
-  margin: 10px;
+.tabs {
+    background: white;
+    padding: 10px 30px;
+}
+
+.tab {
+    padding: 6px 14px;
+    margin-right: 6px;
+    border-radius: 6px;
+    border: none;
+    background: #e9ecf1;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: #0b1c2d;
+    color: white;
+}
+
+.tab.add {
+    font-weight: bold;
+}
+
+.search-box {
+    margin: 20px 30px;
+    position: relative;
+    width: 300px;
 }
 
 #search {
-  padding: 8px;
-  width: 300px;
+    width: 100%;
+    padding: 10px;
 }
 
-#suggestions div {
-  background: #1f2937;
-  padding: 6px;
-  cursor: pointer;
+#suggestions {
+    position: absolute;
+    background: white;
+    width: 100%;
+    border: 1px solid #ccc;
+    z-index: 10;
+}
+
+.suggestion-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background: #eef2f7;
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
+    margin: 0 30px 30px;
+    width: calc(100% - 60px);
+    background: white;
+    border-collapse: collapse;
 }
 
 th, td {
-  padding: 8px;
-  text-align: center;
+    padding: 10px;
+    text-align: center;
 }
 
-.green { color: #22c55e; }
-.red { color: #ef4444; }
+.clickable {
+    cursor: pointer;
+    color: #0b1c2d;
+    font-weight: bold;
+}
 
-button {
-  background: none;
-  color: red;
-  border: none;
-  cursor: pointer;
+.clickable:hover {
+    text-decoration: underline;
 }
