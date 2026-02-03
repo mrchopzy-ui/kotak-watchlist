@@ -1,121 +1,64 @@
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
-const addBtn = document.getElementById("addWatchlist");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
-let priceTimer = null;
+let timer = null;
 
-/* ---------- ADD WATCHLIST ---------- */
-addBtn.onclick = async () => {
-    const name = prompt("New watchlist name:");
-    if (!name) return;
-
-    await fetch("/watchlist", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name})
-    });
-    location.reload();
-};
-
-/* ---------- TAB SWITCH & RENAME ---------- */
-document.querySelectorAll(".tab[data-id]").forEach(tab => {
-    tab.onclick = () => {
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-        activeWatchlist = tab.dataset.id;
-        startPriceRefresh();
-    };
-
-    tab.ondblclick = async () => {
-        const name = prompt("Rename watchlist:", tab.innerText);
-        if (!name) return;
-
-        await fetch(`/watchlist/${tab.dataset.id}`, {
-            method: "PUT",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({name})
-        });
-        location.reload();
-    };
-});
-
-/* ---------- SEARCH ---------- */
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
 
-    const res = await fetch(`/search?q=${search.value}`);
-    const data = await res.json();
+    const r = await fetch(`/search?q=${search.value}`);
+    const data = await r.json();
 
     data.forEach(s => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
-        // show trading symbol in suggestion (user asked for symbol-only)
         d.innerText = s.trading_symbol;
 
         d.onclick = async () => {
-            // send minimal info; server will fill company_name if needed
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
                     trading_symbol: s.trading_symbol,
+                    company_name: s.company_name,
                     exchange_token: s.exchange_token
                 })
             });
-            search.value = "";
             suggestions.innerHTML = "";
+            search.value = "";
             loadPrices();
         };
         suggestions.appendChild(d);
     });
 });
 
-/* ---------- LOAD PRICES ---------- */
 async function loadPrices() {
-    const res = await fetch(`/prices?wid=${activeWatchlist}`);
-    const data = await res.json();
-
+    const r = await fetch(`/prices?wid=${activeWatchlist}`);
+    const data = await r.json();
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const tvSymbol = s.symbol.replace("-EQ", "");
-
         tbody.innerHTML += `
-        <tr onclick="openChart('${tvSymbol}')">
+        <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${s.symbol.replace("-EQ","")}', '_blank')">
             <td>${s.symbol}</td>
-            <td>${s.company_name || ''}</td>
-            <td>${Number(s.ltp).toFixed(2)}</td>
-            <td>${Number(s.pct).toFixed(2)}%</td>
+            <td>${s.company_name}</td>
+            <td>${s.ltp.toFixed(2)}</td>
+            <td>${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">
-                    ✕
-                </button>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
             </td>
         </tr>`;
     });
 }
 
-/* ---------- TRADINGVIEW ---------- */
-function openChart(symbol) {
-    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`, "_blank");
-}
-
-/* ---------- AUTO REFRESH ---------- */
-function startPriceRefresh() {
-    if (priceTimer) clearInterval(priceTimer);
-    loadPrices();
-    priceTimer = setInterval(loadPrices, 5000);
-}
-
-/* ---------- REMOVE STOCK ---------- */
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
@@ -125,5 +68,9 @@ async function removeStock(sym) {
     loadPrices();
 }
 
-document.querySelector(".tab[data-id]").classList.add("active");
-startPriceRefresh();
+function start() {
+    loadPrices();
+    timer = setInterval(loadPrices, 5000);
+}
+
+start();
