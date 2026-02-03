@@ -72,13 +72,3 @@ th, td {
     padding: 10px;
     text-align: center;
 }
-
-.clickable {
-    cursor: pointer;
-    color: #0b1c2d;
-    font-weight: bold;
-}
-
-.clickable:hover {
-    text-decoration: underline;
-}
