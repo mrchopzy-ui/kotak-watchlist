@@ -1,84 +1,45 @@
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f4f6f9;
+  font-family: Inter, sans-serif;
+  background: #0e1117;
+  color: #e5e7eb;
 }
 
-.top-bar {
-    background: #0b1c2d;
-    color: white;
-    padding: 15px 30px;
+header {
+  padding: 20px;
+  font-size: 22px;
 }
 
-.tabs {
-    background: white;
-    padding: 10px 30px;
-}
-
-.tab {
-    padding: 6px 14px;
-    margin-right: 6px;
-    border-radius: 6px;
-    border: none;
-    background: #e9ecf1;
-    cursor: pointer;
-}
-
-.tab.active {
-    background: #0b1c2d;
-    color: white;
-}
-
-.tab.add {
-    font-weight: bold;
-}
-
-.search-box {
-    margin: 20px 30px;
-    position: relative;
-    width: 300px;
+.controls {
+  margin: 10px;
 }
 
 #search {
-    width: 100%;
-    padding: 10px;
+  padding: 8px;
+  width: 300px;
 }
 
-#suggestions {
-    position: absolute;
-    background: white;
-    width: 100%;
-    border: 1px solid #ccc;
-    z-index: 10;
-}
-
-.suggestion-item {
-    padding: 8px;
-    cursor: pointer;
-}
-
-.suggestion-item:hover {
-    background: #eef2f7;
+#suggestions div {
+  background: #1f2937;
+  padding: 6px;
+  cursor: pointer;
 }
 
 table {
-    margin: 0 30px 30px;
-    width: calc(100% - 60px);
-    background: white;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 th, td {
-    padding: 10px;
-    text-align: center;
+  padding: 8px;
+  text-align: center;
 }
 
-.clickable {
-    cursor: pointer;
-    color: #0b1c2d;
-    font-weight: bold;
-}
+.green { color: #22c55e; }
+.red { color: #ef4444; }
 
-.clickable:hover {
-    text-decoration: underline;
+button {
+  background: none;
+  color: red;
+  border: none;
+  cursor: pointer;
 }
