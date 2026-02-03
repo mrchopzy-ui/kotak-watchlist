@@ -1,12 +1,27 @@
-const tabs = document.querySelectorAll(".tab[data-id]");
-const tbody = document.getElementById("watchlist");
+const tabsContainer = document.getElementById("tabs");
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
+const tbody = document.getElementById("watchlist");
+const addBtn = document.getElementById("addWatchlist");
 
-let activeWatchlist = tabs[0].dataset.id;
+let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 
-/* ---------- TAB SWITCH ---------- */
-tabs.forEach(tab => {
+/* ---------- ADD WATCHLIST ---------- */
+addBtn.onclick = async () => {
+    const name = prompt("New watchlist name:");
+    if (!name) return;
+
+    await fetch("/watchlist", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name})
+    });
+
+    location.reload();
+};
+
+/* ---------- TAB SWITCH + RENAME ---------- */
+document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.onclick = () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
@@ -17,11 +32,13 @@ tabs.forEach(tab => {
     tab.ondblclick = async () => {
         const name = prompt("Rename watchlist:", tab.innerText);
         if (!name) return;
+
         await fetch(`/watchlist/${tab.dataset.id}`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({name})
         });
+
         location.reload();
     };
 });
@@ -52,12 +69,12 @@ search.addEventListener("input", async () => {
     });
 });
 
-/* ---------- PRICES ---------- */
+/* ---------- LOAD PRICES ---------- */
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
-    tbody.innerHTML = "";
 
+    tbody.innerHTML = "";
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
@@ -65,11 +82,6 @@ async function loadPrices() {
             <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
             <td>${s.change_pct.toFixed(2)}%</td>
-            <td>${s.volume}</td>
-            <td>${s.open}</td>
-            <td>${s.high}</td>
-            <td>${s.low}</td>
-            <td>${s.close}</td>
             <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
         </tr>`;
     });
@@ -84,4 +96,6 @@ async function removeStock(sym) {
     loadPrices();
 }
 
+/* ---------- INIT ---------- */
+document.querySelector(".tab[data-id]").classList.add("active");
 loadPrices();
