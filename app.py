@@ -14,11 +14,12 @@ DB_FILE = "watchlists.db"
 
 SESSION = {}
 SCRIPS = []
+SCRIP_LOOKUP = {}
 
-# ---------- DATABASE ----------
 def db():
     return sqlite3.connect(DB_FILE)
 
+# ---------------- INIT DB ----------------
 def init_db():
     con = db()
     cur = con.cursor()
@@ -43,10 +44,9 @@ def init_db():
 
 init_db()
 
-# ---------- LOGIN ----------
+# ---------------- LOGIN ----------------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
-
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -68,30 +68,13 @@ def login():
 
 login()
 
-# ---------- LOAD SCRIP MASTER (FIX HERE) ----------
+# ---------------- LOAD SCRIP MASTER ----------------
 with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    raw = csv.DictReader(f)
-    for r in raw:
-        company = (
-            r.get("company_name")
-            or r.get("name")
-            or r.get("instrumentName")
-            or r.get("trading_symbol")
-        )
+    SCRIPS = list(csv.DictReader(f))
+    for s in SCRIPS:
+        SCRIP_LOOKUP[s["trading_symbol"]] = s["company_name"]
 
-        SCRIPS.append({
-            "trading_symbol": r.get("trading_symbol"),
-            "exchange_token": r.get("exchange_token"),
-            "company_name": company.strip()
-        })
-
-# ---------- HELPERS ----------
-def get_watchlists():
-    con = db()
-    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
-    con.close()
-    return rows
-
+# ---------------- HELPERS ----------------
 def format_volume(v):
     v = float(v)
     if v >= 1_000_000_000:
@@ -102,31 +85,18 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
-# ---------- ROUTES ----------
+# ---------------- ROUTES ----------------
 @app.route("/")
 def index():
-    return render_template("index.html", watchlists=get_watchlists())
+    con = db()
+    w = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
+    con.close()
+    return render_template("index.html", watchlists=w)
 
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
     return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
-
-@app.route("/watchlist", methods=["POST"])
-def create_watchlist():
-    con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename_watchlist(wid):
-    con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
-    con.commit()
-    con.close()
-    return "", 204
 
 @app.route("/add", methods=["POST"])
 def add_stock():
@@ -149,8 +119,8 @@ def add_stock():
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
-    wid = request.args.get("wid")
     sym = request.json["trading_symbol"]
+    wid = request.args.get("wid")
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
@@ -163,30 +133,35 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
-
     con = db()
-    stocks = con.execute(
-        "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
-        (wid,)
-    ).fetchall()
+    rows = con.execute("""
+        SELECT trading_symbol, company_name, exchange_token
+        FROM stocks WHERE watchlist_id=?
+    """, (wid,)).fetchall()
     con.close()
 
-    if not stocks:
+    if not rows:
         return jsonify([])
 
-    q = ",".join([f"nse_cm|{s[2]}" for s in stocks])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
+    queries = ",".join([f"nse_cm|{r[2]}" for r in rows])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for qd, s in zip(data, stocks):
-        o = qd.get("ohlc", {})
+    for q, r in zip(data, rows):
+        symbol, cname, token = r
+
+        # 🔧 FIX: fallback to CSV lookup
+        if not cname:
+            cname = SCRIP_LOOKUP.get(symbol, symbol)
+
+        o = q.get("ohlc", {})
         out.append({
-            "symbol": s[0],
-            "company_name": s[1],
-            "ltp": float(qd.get("ltp", 0)),
-            "pct": float(qd.get("per_change", 0)),
-            "volume": format_volume(qd.get("last_volume", 0)),
+            "symbol": symbol,
+            "company_name": cname,
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
             "open": o.get("open", 0),
             "high": o.get("high", 0),
             "low": o.get("low", 0),
