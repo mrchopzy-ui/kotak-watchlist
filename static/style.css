@@ -72,11 +72,3 @@ th, td {
     padding: 10px;
     text-align: center;
 }
-
-tbody tr {
-    cursor: pointer;
-}
-
-tbody tr:hover {
-    background: #f1f5fa;
-}
