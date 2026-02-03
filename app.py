@@ -72,6 +72,12 @@ login()
 with open(DATA_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
+# 🔑 FAST LOOKUP MAP
+SCRIPT_MAP = {
+    s["trading_symbol"]: s["company_name"]
+    for s in SCRIPS
+}
+
 # ---------------- HELPERS ----------------
 def get_watchlists():
     con = db()
@@ -99,46 +105,19 @@ def search():
     q = request.args.get("q", "").lower()
     return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
-@app.route("/watchlist", methods=["POST"])
-def create_watchlist():
-    name = request.json.get("name")
-    con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (name,))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename_watchlist(wid):
-    name = request.json.get("name")
-    con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
-    con.commit()
-    con.close()
-    return "", 204
-
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
+
+    symbol = s["trading_symbol"]
+    company = SCRIPT_MAP.get(symbol, symbol)
+
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
         VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/remove", methods=["POST"])
-def remove_stock():
-    sym = request.json["trading_symbol"]
-    wid = request.args.get("wid")
-    con = db()
-    con.execute(
-        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (wid, sym)
-    )
+    """, (wid, symbol, company, s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
@@ -146,6 +125,7 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
+
     con = db()
     stocks = con.execute(
         "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
@@ -175,6 +155,19 @@ def prices():
             "close": o.get("close", 0)
         })
     return jsonify(out)
+
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    sym = request.json["trading_symbol"]
+    wid = request.args.get("wid")
+    con = db()
+    con.execute(
+        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
+        (wid, sym)
+    )
+    con.commit()
+    con.close()
+    return "", 204
 
 if __name__ == "__main__":
     app.run()
