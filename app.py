@@ -97,14 +97,7 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([
-        {
-            "trading_symbol": s["trading_symbol"],
-            "company_name": s["company_name"],
-            "exchange_token": s["exchange_token"]
-        }
-        for s in SCRIPS if q in s["trading_symbol"].lower()
-    ][:10])
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
@@ -176,7 +169,10 @@ def prices():
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
-            "tv": s[0].replace("-EQ", "")
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
     return jsonify(out)
 
