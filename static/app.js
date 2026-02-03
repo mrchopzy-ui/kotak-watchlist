@@ -71,10 +71,8 @@ async function loadPrices() {
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const tvSymbol = `NSE:${s.symbol.replace("-EQ","")}`;
-
         tbody.innerHTML += `
-        <tr onclick="openChart('${tvSymbol}')">
+        <tr>
             <td>${s.symbol}</td>
             <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -84,17 +82,9 @@ async function loadPrices() {
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
-            <td><button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button></td>
+            <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
         </tr>`;
     });
-}
-
-/* ---------- TRADINGVIEW ---------- */
-function openChart(symbol) {
-    window.open(
-        `https://www.tradingview.com/chart/?symbol=${symbol}`,
-        "_blank"
-    );
 }
 
 async function removeStock(sym) {
