@@ -6,30 +6,47 @@ const addBtn = document.getElementById("addWatchlist");
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
 
+/* ---------- TRADINGVIEW ---------- */
 function openChart(symbol) {
     const clean = symbol.replace("-EQ", "");
-    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${clean}`, "_blank");
+    const url = `https://www.tradingview.com/chart/?symbol=NSE:${clean}`;
+    window.open(url, "_blank");
 }
 
 /* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
+
     await fetch("/watchlist", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({name})
     });
+
     location.reload();
 };
 
-/* ---------- TABS ---------- */
+/* ---------- TAB SWITCH & RENAME ---------- */
 document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.onclick = () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
         startPriceRefresh();
+    };
+
+    tab.ondblclick = async () => {
+        const name = prompt("Rename watchlist:", tab.innerText);
+        if (!name) return;
+
+        await fetch(`/watchlist/${tab.dataset.id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name})
+        });
+
+        location.reload();
     };
 });
 
@@ -44,32 +61,38 @@ search.addEventListener("input", async () => {
     data.forEach(s => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
-        d.innerText = `${s.trading_symbol} — ${s.company_name}`;
+        d.innerText = s.trading_symbol;
+
         d.onclick = async () => {
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(s)
             });
+
             search.value = "";
             suggestions.innerHTML = "";
             loadPrices();
         };
+
         suggestions.appendChild(d);
     });
 });
 
-/* ---------- PRICES ---------- */
+/* ---------- LOAD PRICES ---------- */
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
+
     tbody.innerHTML = "";
 
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
             <td class="clickable" onclick="openChart('${s.symbol}')">${s.symbol}</td>
-            <td class="clickable" onclick="openChart('${s.symbol}')">${s.company}</td>
+            <td class="clickable" onclick="openChart('${s.symbol}')">
+                ${s.company || ""}
+            </td>
             <td>${s.ltp.toFixed(2)}</td>
             <td>${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
@@ -77,7 +100,9 @@ async function loadPrices() {
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
-            <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
+            <td>
+                <button onclick="removeStock('${s.symbol}')">✕</button>
+            </td>
         </tr>`;
     });
 }
@@ -89,14 +114,17 @@ function startPriceRefresh() {
     priceTimer = setInterval(loadPrices, 5000);
 }
 
+/* ---------- REMOVE ---------- */
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
+
     loadPrices();
 }
 
+/* ---------- INIT ---------- */
 document.querySelector(".tab[data-id]").classList.add("active");
 startPriceRefresh();
