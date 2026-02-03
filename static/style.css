@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background: #f4f6f9;
 }
 
@@ -55,6 +55,10 @@ body {
 .suggestion-item {
     padding: 8px;
     cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background: #eef2f7;
 }
 
 table {
