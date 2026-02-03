@@ -97,22 +97,28 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+    return jsonify([
+        {
+            "trading_symbol": s["trading_symbol"],
+            "company_name": s["company_name"],
+            "exchange_token": s["exchange_token"]
+        }
+        for s in SCRIPS
+        if q in s["trading_symbol"].lower()
+    ][:10])
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
-    name = request.json.get("name")
     con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (name,))
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
-    name = request.json.get("name")
     con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
     con.commit()
     con.close()
     return "", 204
@@ -121,23 +127,27 @@ def rename_watchlist(wid):
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
+
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
         VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
+    """, (
+        wid,
+        s["trading_symbol"],
+        s["company_name"],
+        s["exchange_token"]
+    ))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
-    sym = request.json["trading_symbol"]
-    wid = request.args.get("wid")
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (wid, sym)
+        (request.args.get("wid"), request.json["trading_symbol"])
     )
     con.commit()
     con.close()
@@ -147,17 +157,17 @@ def remove_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
-    stocks = con.execute(
-        "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
-        (wid,)
-    ).fetchall()
+    stocks = con.execute("""
+        SELECT trading_symbol, company_name, exchange_token
+        FROM stocks WHERE watchlist_id=?
+    """, (wid,)).fetchall()
     con.close()
 
     if not stocks:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{s[2]}" for s in stocks])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    query = ",".join([f"nse_cm|{s[2]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{query}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
@@ -165,7 +175,7 @@ def prices():
         o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company": s[1],
+            "company": s[1],  # ✅ REAL COMPANY NAME
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
