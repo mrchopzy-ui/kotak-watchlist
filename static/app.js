@@ -6,6 +6,14 @@ const addBtn = document.getElementById("addWatchlist");
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
 
+/* ---------- TRADINGVIEW ---------- */
+function openChart(symbol) {
+    // Convert NSE symbol like ITC-EQ → ITC
+    const clean = symbol.replace("-EQ", "");
+    const url = `https://www.tradingview.com/chart/?symbol=NSE:${clean}`;
+    window.open(url, "_blank");
+}
+
 /* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
@@ -83,8 +91,8 @@ async function loadPrices() {
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
-            <td>${s.symbol}</td>
-            <td>${s.company}</td>
+            <td class="clickable" onclick="openChart('${s.symbol}')">${s.symbol}</td>
+            <td class="clickable" onclick="openChart('${s.symbol}')">${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
             <td>${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
@@ -101,18 +109,12 @@ async function loadPrices() {
 
 /* ---------- AUTO REFRESH ---------- */
 function startPriceRefresh() {
-    if (priceTimer) {
-        clearInterval(priceTimer);
-    }
-
-    loadPrices(); // immediate fetch
-
-    priceTimer = setInterval(() => {
-        loadPrices();
-    }, 5000); // every 5 seconds
+    if (priceTimer) clearInterval(priceTimer);
+    loadPrices();
+    priceTimer = setInterval(loadPrices, 5000);
 }
 
-/* ---------- REMOVE STOCK ---------- */
+/* ---------- REMOVE ---------- */
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
