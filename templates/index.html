@@ -14,11 +14,11 @@
     {% for w in watchlists %}
         <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
     {% endfor %}
-    <button class="tab add" onclick="newWatchlist()">+</button>
+    <button class="tab add" id="addWatchlist">+</button>
 </div>
 
 <div class="search-box">
-    <input id="search" placeholder="Search stock symbol">
+    <input id="search" placeholder="Type stock symbol">
     <div id="suggestions"></div>
 </div>
 
@@ -29,11 +29,6 @@
             <th>Company</th>
             <th>LTP</th>
             <th>%</th>
-            <th>Volume</th>
-            <th>O</th>
-            <th>H</th>
-            <th>L</th>
-            <th>C</th>
             <th>Delete</th>
         </tr>
     </thead>
