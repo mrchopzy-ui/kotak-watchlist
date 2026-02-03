@@ -16,7 +16,6 @@ addBtn.onclick = async () => {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({name})
     });
-
     location.reload();
 };
 
@@ -38,7 +37,6 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({name})
         });
-
         location.reload();
     };
 });
@@ -62,12 +60,10 @@ search.addEventListener("input", async () => {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(s)
             });
-
             search.value = "";
             suggestions.innerHTML = "";
             loadPrices();
         };
-
         suggestions.appendChild(d);
     });
 });
@@ -80,12 +76,12 @@ async function loadPrices() {
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const symbolOnly = s.symbol.replace("-EQ", "");
+        const tvSymbol = s.symbol.replace("-EQ", "");
 
         tbody.innerHTML += `
-        <tr class="row-click" onclick="openChart('${symbolOnly}')">
+        <tr onclick="openChart('${tvSymbol}')">
             <td>${s.symbol}</td>
-            <td>${s.company}</td>
+            <td>${s.company_name}</td>
             <td>${s.ltp.toFixed(2)}</td>
             <td>${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
@@ -102,10 +98,9 @@ async function loadPrices() {
     });
 }
 
-/* ---------- OPEN TRADINGVIEW ---------- */
+/* ---------- TRADINGVIEW ---------- */
 function openChart(symbol) {
-    const url = `https://www.tradingview.com/chart/?symbol=NSE:${symbol}`;
-    window.open(url, "_blank");
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`, "_blank");
 }
 
 /* ---------- AUTO REFRESH ---------- */
@@ -125,6 +120,5 @@ async function removeStock(sym) {
     loadPrices();
 }
 
-/* ---------- INIT ---------- */
 document.querySelector(".tab[data-id]").classList.add("active");
 startPriceRefresh();
