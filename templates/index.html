@@ -1,181 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Kotak Watchlist</title>
-
-<style>
-body {
-    font-family: "Segoe UI", Arial;
-    background:#f4f6f8;
-    margin:0;
-}
-.container {
-    max-width:1300px;
-    margin:auto;
-    padding:20px;
-}
-input {
-    width:100%;
-    padding:10px;
-    font-size:14px;
-}
-.suggestions {
-    background:white;
-    border:1px solid #ccc;
-    max-height:220px;
-    overflow:auto;
-    position:relative;
-    z-index:10;
-}
-.suggestions div {
-    padding:8px;
-    cursor:pointer;
-}
-.suggestions div:hover {
-    background:#eef2ff;
-}
-
-table {
-    width:100%;
-    background:white;
-    border-collapse:collapse;
-    margin-top:10px;
-    font-size:13px;
-}
-th,td {
-    padding:10px;
-    border-bottom:1px solid #ddd;
-    text-align:center;
-}
-th {
-    background:#f1f3f6;
-}
-
-.company {
-    color:#2962ff;
-    cursor:pointer;
-    font-weight:600;
-}
-.company:hover {
-    text-decoration: underline;
-}
-
-.remove {
-    color:#e53935;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-.pos { color:#2e7d32; font-weight:600; }
-.neg { color:#c62828; font-weight:600; }
-</style>
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-
 <body>
-<div class="container">
 
-<input id="searchBox"
-       placeholder="Type company name (e.g. Reliance)"
-       oninput="searchStocks()">
+<header class="top-bar">
+    <h1>Nexus Asset Management</h1>
+</header>
 
-<div class="suggestions" id="suggestions"></div>
-
-<table>
-<thead>
-<tr>
-<th>Company</th>
-<th>Price</th>
-<th>% Chg</th>
-<th>Open</th>
-<th>High</th>
-<th>Low</th>
-<th>Close</th>
-<th>✖</th>
-</tr>
-</thead>
-<tbody id="rows"></tbody>
-</table>
-
+<div class="tabs">
+    {% for w in watchlists %}
+        <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
+    {% endfor %}
+    <button class="tab add" id="addWatchlist">+</button>
 </div>
 
-<script>
-const searchBox = document.getElementById("searchBox");
-const suggestions = document.getElementById("suggestions");
+<div class="search-box">
+    <input id="search" placeholder="Type stock symbol">
+    <div id="suggestions"></div>
+</div>
 
-function searchStocks() {
-    const q = searchBox.value.trim();
-    if (q.length < 2) {
-        suggestions.innerHTML = "";
-        return;
-    }
+<table>
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Company</th>
+            <th>LTP</th>
+            <th>%</th>
+            <th>Volume</th>
+            <th>Open</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Close</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody id="watchlist"></tbody>
+</table>
 
-    fetch(`/search?q=${encodeURIComponent(q)}`)
-        .then(r => r.json())
-        .then(data => {
-            suggestions.innerHTML = data.map(
-                s => `<div onclick="addStock('${s.symbol}')">${s.name}</div>`
-            ).join("");
-        });
-}
-
-function addStock(symbol) {
-    fetch("/add", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ symbol })
-    });
-
-    searchBox.value = "";
-    suggestions.innerHTML = "";
-}
-
-function removeStock(symbol) {
-    fetch("/remove", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ symbol })
-    });
-}
-
-// Convert RELIANCE-EQ → NSE:RELIANCE
-function openChart(trdSymbol) {
-    const clean = trdSymbol.replace("-EQ", "");
-    const url = `https://www.tradingview.com/chart/?symbol=NSE:${clean}`;
-    window.open(url, "_blank");
-}
-
-function f2(v){ return Number(v).toFixed(2); }
-
-function refreshPrices() {
-    fetch("/prices")
-        .then(r => r.json())
-        .then(data => {
-            rows.innerHTML = data.map(s => {
-                const chg = parseFloat(s.per_change);
-                const cls = chg >= 0 ? "pos" : "neg";
-                const full = `${s.exchange}|${s.exchange_token}`;
-
-                return `
-                <tr>
-                    <td class="company"
-                        onclick="openChart('${s.display_symbol}')">
-                        ${s.display_symbol}
-                    </td>
-                    <td>${f2(s.ltp)}</td>
-                    <td class="${cls}">${f2(chg)}%</td>
-                    <td>${f2(s.ohlc.open)}</td>
-                    <td>${f2(s.ohlc.high)}</td>
-                    <td>${f2(s.ohlc.low)}</td>
-                    <td>${f2(s.ohlc.close)}</td>
-                    <td class="remove"
-                        onclick="removeStock('${full}')">✖</td>
-                </tr>`;
-            }).join("");
-        });
-}
-
-setInterval(refreshPrices, 5000);
-</script>
-
+<script src="/static/app.js"></script>
 </body>
 </html>
