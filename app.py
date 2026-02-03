@@ -79,6 +79,16 @@ def get_watchlists():
     con.close()
     return rows
 
+def format_volume(v):
+    v = float(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
+    return str(int(v))
+
 # ---------------- ROUTES ----------------
 @app.route("/")
 def index():
@@ -92,9 +102,6 @@ def search():
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
     name = request.json.get("name")
-    if not name:
-        return "", 400
-
     con = db()
     con.execute("INSERT INTO watchlists(name) VALUES (?)", (name,))
     con.commit()
@@ -104,9 +111,6 @@ def create_watchlist():
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
     name = request.json.get("name")
-    if not name:
-        return "", 400
-
     con = db()
     con.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
     con.commit()
@@ -117,7 +121,6 @@ def rename_watchlist(wid):
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
-
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
@@ -131,7 +134,6 @@ def add_stock():
 def remove_stock():
     sym = request.json["trading_symbol"]
     wid = request.args.get("wid")
-
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
@@ -144,7 +146,6 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
-
     con = db()
     stocks = con.execute(
         "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
@@ -161,11 +162,17 @@ def prices():
 
     out = []
     for q, s in zip(data, stocks):
+        o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
             "company": s[1],
             "ltp": float(q.get("ltp", 0)),
-            "change_pct": float(q.get("per_change", 0))
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
     return jsonify(out)
 
