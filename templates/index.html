@@ -10,7 +10,7 @@
     <h1>Nexus Asset Management</h1>
 </header>
 
-<div class="tabs" id="tabs">
+<div class="tabs">
     {% for w in watchlists %}
         <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
     {% endfor %}
@@ -29,6 +29,11 @@
             <th>Company</th>
             <th>LTP</th>
             <th>%</th>
+            <th>Volume</th>
+            <th>Open</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Close</th>
             <th>Delete</th>
         </tr>
     </thead>
