@@ -1,56 +1,70 @@
+const tabsDiv = document.getElementById("tabs");
 const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
-const addBtn = document.getElementById("addWatchlist");
 
-let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
+let activeWatchlist = null;
 let priceTimer = null;
 
-/* ---------- TRADINGVIEW ---------- */
-function openChart(symbol) {
-    const clean = symbol.replace("-EQ", "");
-    const url = `https://www.tradingview.com/chart/?symbol=NSE:${clean}`;
-    window.open(url, "_blank");
-}
+/* -------- RENDER TABS -------- */
+function renderTabs(tabs) {
+    tabsDiv.innerHTML = "";
 
-/* ---------- ADD WATCHLIST ---------- */
-addBtn.onclick = async () => {
-    const name = prompt("New watchlist name:");
-    if (!name) return;
+    tabs.forEach(w => {
+        const b = document.createElement("button");
+        b.className = "tab";
+        b.dataset.id = w[0];
+        b.innerText = w[1];
 
-    await fetch("/watchlist", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name})
+        b.onclick = () => {
+            document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+            b.classList.add("active");
+            activeWatchlist = w[0];
+            startPriceRefresh();
+        };
+
+        b.ondblclick = async () => {
+            const name = prompt("Rename watchlist:", w[1]);
+            if (!name) return;
+
+            const res = await fetch(`/watchlist/${w[0]}`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({name})
+            });
+
+            renderTabs(await res.json());
+        };
+
+        tabsDiv.appendChild(b);
     });
 
-    location.reload();
-};
-
-/* ---------- TAB SWITCH & RENAME ---------- */
-document.querySelectorAll(".tab[data-id]").forEach(tab => {
-    tab.onclick = () => {
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-        activeWatchlist = tab.dataset.id;
-        startPriceRefresh();
-    };
-
-    tab.ondblclick = async () => {
-        const name = prompt("Rename watchlist:", tab.innerText);
+    const add = document.createElement("button");
+    add.className = "tab add";
+    add.innerText = "+";
+    add.onclick = async () => {
+        const name = prompt("New watchlist name:");
         if (!name) return;
 
-        await fetch(`/watchlist/${tab.dataset.id}`, {
-            method: "PUT",
+        const res = await fetch("/watchlist", {
+            method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({name})
         });
 
-        location.reload();
+        renderTabs(await res.json());
     };
-});
 
-/* ---------- SEARCH ---------- */
+    tabsDiv.appendChild(add);
+
+    if (!activeWatchlist && tabs.length) {
+        activeWatchlist = tabs[0][0];
+    }
+
+    document.querySelector(`[data-id="${activeWatchlist}"]`)?.classList.add("active");
+}
+
+/* -------- SEARCH -------- */
 search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
@@ -62,37 +76,31 @@ search.addEventListener("input", async () => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
         d.innerText = s.trading_symbol;
-
         d.onclick = async () => {
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(s)
             });
-
             search.value = "";
             suggestions.innerHTML = "";
             loadPrices();
         };
-
         suggestions.appendChild(d);
     });
 });
 
-/* ---------- LOAD PRICES ---------- */
+/* -------- PRICES -------- */
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
 
     tbody.innerHTML = "";
-
     data.forEach(s => {
         tbody.innerHTML += `
         <tr>
-            <td class="clickable" onclick="openChart('${s.symbol}')">${s.symbol}</td>
-            <td class="clickable" onclick="openChart('${s.symbol}')">
-                ${s.company || ""}
-            </td>
+            <td>${s.symbol}</td>
+            <td>${s.company}</td>
             <td>${s.ltp.toFixed(2)}</td>
             <td>${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
@@ -100,31 +108,30 @@ async function loadPrices() {
             <td>${s.high}</td>
             <td>${s.low}</td>
             <td>${s.close}</td>
-            <td>
-                <button onclick="removeStock('${s.symbol}')">✕</button>
-            </td>
+            <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
         </tr>`;
     });
 }
 
-/* ---------- AUTO REFRESH ---------- */
-function startPriceRefresh() {
-    if (priceTimer) clearInterval(priceTimer);
-    loadPrices();
-    priceTimer = setInterval(loadPrices, 5000);
-}
-
-/* ---------- REMOVE ---------- */
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
-
     loadPrices();
 }
 
-/* ---------- INIT ---------- */
-document.querySelector(".tab[data-id]").classList.add("active");
-startPriceRefresh();
+/* -------- AUTO REFRESH -------- */
+function startPriceRefresh() {
+    if (priceTimer) clearInterval(priceTimer);
+    loadPrices();
+    priceTimer = setInterval(loadPrices, 5000);
+}
+
+/* -------- INIT -------- */
+fetch("/")
+    .then(() => fetch("/watchlist", {method: "POST", body: JSON.stringify({name: "__noop__"})}))
+    .catch(() => {});
+
+fetch("/").then(() => location.reload());
