@@ -3,7 +3,6 @@ import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
-# ---------------- ENV ----------------
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
@@ -16,7 +15,7 @@ DB_FILE = "watchlists.db"
 SESSION = {}
 SCRIPS = []
 
-# ---------------- DB ----------------
+# ---------- DATABASE ----------
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -44,9 +43,10 @@ def init_db():
 
 init_db()
 
-# ---------------- LOGIN ----------------
+# ---------- LOGIN ----------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
+
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -68,11 +68,24 @@ def login():
 
 login()
 
-# ---------------- LOAD SCRIP MASTER ----------------
+# ---------- LOAD SCRIP MASTER (FIX HERE) ----------
 with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
+    raw = csv.DictReader(f)
+    for r in raw:
+        company = (
+            r.get("company_name")
+            or r.get("name")
+            or r.get("instrumentName")
+            or r.get("trading_symbol")
+        )
 
-# ---------------- HELPERS ----------------
+        SCRIPS.append({
+            "trading_symbol": r.get("trading_symbol"),
+            "exchange_token": r.get("exchange_token"),
+            "company_name": company.strip()
+        })
+
+# ---------- HELPERS ----------
 def get_watchlists():
     con = db()
     rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
@@ -89,7 +102,7 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
-# ---------------- ROUTES ----------------
+# ---------- ROUTES ----------
 @app.route("/")
 def index():
     return render_template("index.html", watchlists=get_watchlists())
@@ -101,18 +114,16 @@ def search():
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
-    name = request.json.get("name")
     con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (name,))
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
-    name = request.json.get("name")
     con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
     con.commit()
     con.close()
     return "", 204
@@ -121,19 +132,25 @@ def rename_watchlist(wid):
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
+
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
         VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
+    """, (
+        wid,
+        s["trading_symbol"],
+        s["company_name"],
+        s["exchange_token"]
+    ))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
-    sym = request.json["trading_symbol"]
     wid = request.args.get("wid")
+    sym = request.json["trading_symbol"]
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
@@ -146,6 +163,7 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
+
     con = db()
     stocks = con.execute(
         "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
@@ -156,24 +174,25 @@ def prices():
     if not stocks:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{s[2]}" for s in stocks])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    q = ",".join([f"nse_cm|{s[2]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for q, s in zip(data, stocks):
-        o = q.get("ohlc", {})
+    for qd, s in zip(data, stocks):
+        o = qd.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company": s[1],
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": format_volume(q.get("last_volume", 0)),
+            "company_name": s[1],
+            "ltp": float(qd.get("ltp", 0)),
+            "pct": float(qd.get("per_change", 0)),
+            "volume": format_volume(qd.get("last_volume", 0)),
             "open": o.get("open", 0),
             "high": o.get("high", 0),
             "low": o.get("low", 0),
             "close": o.get("close", 0)
         })
+
     return jsonify(out)
 
 if __name__ == "__main__":
