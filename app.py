@@ -65,20 +65,17 @@ def login():
 
 login()
 
-# ---------- LOAD SCRIP MASTER ----------
 with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    for r in csv.DictReader(f):
-        SCRIPS.append({
-            "trading_symbol": r["trading_symbol"],
-            "company_name": r["company_name"].strip(),
-            "exchange_token": r["exchange_token"]
-        })
+    SCRIPS = list(csv.DictReader(f))
 
 def format_volume(v):
     v = float(v)
-    if v >= 1_000_000_000: return f"{v/1e9:.2f}B"
-    if v >= 1_000_000: return f"{v/1e6:.2f}M"
-    if v >= 1_000: return f"{v/1e3:.2f}K"
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
     return str(int(v))
 
 @app.route("/")
@@ -101,7 +98,12 @@ def add_stock():
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
         VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
+    """, (
+        wid,
+        s["trading_symbol"],
+        s["company_name"],
+        s["exchange_token"]
+    ))
     con.commit()
     con.close()
     return "", 204
@@ -123,25 +125,25 @@ def remove_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
-    rows = con.execute("""
+    stocks = con.execute("""
         SELECT trading_symbol, company_name, exchange_token
         FROM stocks WHERE watchlist_id=?
     """, (wid,)).fetchall()
     con.close()
 
-    if not rows:
+    if not stocks:
         return jsonify([])
 
-    qs = ",".join([f"nse_cm|{r[2]}" for r in rows])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{qs}/all"
+    queries = ",".join([f"nse_cm|{s[2]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for q, r in zip(data, rows):
+    for q, s in zip(data, stocks):
         o = q.get("ohlc", {})
         out.append({
-            "symbol": r[0],
-            "company_name": r[1],
+            "symbol": s[0],
+            "company_name": s[1],
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
