@@ -135,10 +135,10 @@ def add_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
-    stocks = con.execute("""
-        SELECT trading_symbol, exchange_token, company_name
-        FROM stocks WHERE watchlist_id=?
-    """, (wid,)).fetchall()
+    stocks = con.execute(
+        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+        (wid,)
+    ).fetchall()
     con.close()
 
     if not stocks:
@@ -150,14 +150,25 @@ def prices():
 
     out = []
     for q, s in zip(data, stocks):
+        symbol_eq = s[0]                # TCS-EQ
+        symbol = symbol_eq.replace("-EQ", "")  # TCS
+
+        o = q.get("ohlc", {})
         out.append({
-            "symbol": s[0],
-            "company_name": s[2],
+            "symbol": symbol_eq,
+            "company_name": COMPANIES.get(symbol, symbol),
             "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0))
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
 
     return jsonify(out)
 
+
 if __name__ == "__main__":
     app.run()
+
