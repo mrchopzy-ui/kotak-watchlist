@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-import csv, os, sqlite3, requests, pyotp, json
+import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
@@ -9,19 +9,14 @@ USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-DATA_FILE = "data/nse_eq_scrip_master.csv"
-COMPANY_FILE = "data/company_master.json"
+SCRIP_FILE = "data/nse_eq_scrip_master.csv"
+COMPANY_FILE = "data/nse_company_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
-SCRIPS = {}
-COMPANY_NAMES = {}
+SCRIPS = []
+COMPANIES = {}
 
-# ---------- LOAD COMPANY MASTER ----------
-with open(COMPANY_FILE, "r", encoding="utf-8") as f:
-    COMPANY_NAMES = json.load(f)
-
-# ---------- DB ----------
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -48,7 +43,6 @@ def init_db():
 
 init_db()
 
-# ---------- LOGIN ----------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
     r1 = requests.post(
@@ -72,38 +66,74 @@ def login():
 
 login()
 
-# ---------- LOAD SCRIP MASTER ----------
-with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    for r in csv.DictReader(f):
-        sym = r["trading_symbol"].replace("-EQ", "")
-        SCRIPS[r["trading_symbol"]] = {
-            "trading_symbol": r["trading_symbol"],
-            "exchange_token": r["exchange_token"],
-            "company_name": COMPANY_NAMES.get(sym, sym)
-        }
+# Load scrip master
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
 
-# ---------- ROUTES ----------
+# Load company master
+with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
+    for r in csv.DictReader(f):
+        COMPANIES[r["symbol"]] = r["company_name"]
+
+def get_watchlists():
+    con = db()
+    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
+    con.close()
+    return rows
+
+def format_volume(v):
+    v = float(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
+    return str(int(v))
+
 @app.route("/")
 def index():
-    con = db()
-    w = con.execute("SELECT id,name FROM watchlists").fetchall()
-    con.close()
-    return render_template("index.html", watchlists=w)
+    return render_template("index.html", watchlists=get_watchlists())
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").upper()
-    return jsonify(
-        [v for k, v in SCRIPS.items() if q in k][:10]
-    )
+    q = request.args.get("q", "").lower()
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+
+@app.route("/watchlist", methods=["POST"])
+def create_watchlist():
+    con = db()
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/watchlist/<int:wid>", methods=["PUT"])
+def rename_watchlist(wid):
+    con = db()
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
+    con.commit()
+    con.close()
+    return "", 204
 
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
     con = db()
+    con.execute("""
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
+        VALUES (?, ?, ?)
+    """, (request.args.get("wid"), s["trading_symbol"], s["exchange_token"]))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    con = db()
     con.execute(
-        "INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token) VALUES (?,?,?)",
-        (request.args.get("wid"), s["trading_symbol"], s["exchange_token"])
+        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
+        (request.args.get("wid"), request.json["trading_symbol"])
     )
     con.commit()
     con.close()
@@ -113,26 +143,35 @@ def add_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
-    rows = con.execute(
+    stocks = con.execute(
         "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
         (wid,)
     ).fetchall()
     con.close()
 
-    if not rows:
+    if not stocks:
         return jsonify([])
 
-    q = ",".join([f"nse_cm|{r[1]}" for r in rows])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
+    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for quote, r in zip(data, rows):
-        sym = r[0].replace("-EQ", "")
+    for q, s in zip(data, stocks):
+        sym = s[0].replace("-EQ", "")
+        o = q.get("ohlc", {})
         out.append({
-            "symbol": r[0],
-            "company_name": COMPANY_NAMES.get(sym, sym),
-            "ltp": float(quote.get("ltp", 0)),
-            "pct": float(quote.get("per_change", 0))
+            "symbol": s[0],
+            "company_name": COMPANIES.get(sym, sym),
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
     return jsonify(out)
+
+if __name__ == "__main__":
+    app.run()
