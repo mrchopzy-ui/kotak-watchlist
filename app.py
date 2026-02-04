@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-import csv, os, sqlite3, requests, pyotp
+import csv, sqlite3, os, requests, pyotp
 
 app = Flask(__name__)
 
@@ -10,40 +10,72 @@ MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
+COMPANY_FILE = "data/nse_company_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
-SCRIPS = []
+
+# ================= COMPANY MASTER (STRICT LOAD) =================
+
+print("🔍 Loading NSE Company Master...")
+
+if not os.path.exists(COMPANY_FILE):
+    raise Exception(f"❌ FILE NOT FOUND: {COMPANY_FILE}")
+
+COMPANY_MAP = {}
+
+with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for r in reader:
+        sym = r.get("symbol", "").strip()
+        name = r.get("company_name", "").strip()
+        if sym and name:
+            COMPANY_MAP[sym] = name
+
+print(f"✅ Loaded {len(COMPANY_MAP)} company names")
+
+# HARD VALIDATION
+if len(COMPANY_MAP) < 1000:
+    raise Exception("❌ Company master looks incomplete (<1000 rows)")
+
+if "TCS" not in COMPANY_MAP:
+    raise Exception("❌ TCS NOT FOUND in company master")
+
+print(f"🧪 TCS → {COMPANY_MAP['TCS']}")
+
+# ================= LOAD SCRIP MASTER =================
+
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
+
+# ================= DATABASE =================
 
 def db():
     return sqlite3.connect(DB_FILE)
 
 def init_db():
     con = db()
-    cur = con.cursor()
-
-    cur.execute("""
+    con.execute("""
         CREATE TABLE IF NOT EXISTS watchlists(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE
         )
     """)
-
-    cur.execute("""
+    con.execute("""
         CREATE TABLE IF NOT EXISTS stocks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             watchlist_id INTEGER,
             trading_symbol TEXT,
-            exchange_token TEXT,
-            company_name TEXT
+            exchange_token TEXT
         )
     """)
-
-    cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
+    con.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
     con.commit()
     con.close()
 
 init_db()
+
+# ================= KOTAK LOGIN =================
 
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
@@ -69,64 +101,28 @@ def login():
 
 login()
 
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
-
-def get_company_name_from_nse(symbol):
-    sym = symbol.replace("-EQ", "")
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://www.nseindia.com"
-    })
-
-    session.get("https://www.nseindia.com", timeout=10)
-    r = session.get(
-        f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
-        timeout=10
-    )
-
-    if r.status_code != 200:
-        return sym
-
-    return r.json().get("info", {}).get("companyName", sym)
-
-def get_watchlists():
-    con = db()
-    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
-    con.close()
-    return rows
+# ================= ROUTES =================
 
 @app.route("/")
 def index():
-    return render_template("index.html", watchlists=get_watchlists())
+    con = db()
+    w = con.execute("SELECT id,name FROM watchlists").fetchall()
+    con.close()
+    return render_template("index.html", watchlists=w)
 
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
     return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
-@app.route("/watchlist", methods=["POST"])
-def create_watchlist():
-    con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
-    con.commit()
-    con.close()
-    return "", 204
-
 @app.route("/add", methods=["POST"])
-def add_stock():
+def add():
     s = request.json
-    wid = request.args.get("wid")
-
-    company = get_company_name_from_nse(s["trading_symbol"])
-
     con = db()
-    con.execute("""
-        INSERT INTO stocks
-        (watchlist_id, trading_symbol, exchange_token, company_name)
-        VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"], company))
+    con.execute(
+        "INSERT INTO stocks(watchlist_id,trading_symbol,exchange_token) VALUES (?,?,?)",
+        (request.args.get("wid"), s["trading_symbol"], s["exchange_token"])
+    )
     con.commit()
     con.close()
     return "", 204
@@ -135,40 +131,30 @@ def add_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
-    stocks = con.execute(
-        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+    rows = con.execute(
+        "SELECT trading_symbol,exchange_token FROM stocks WHERE watchlist_id=?",
         (wid,)
     ).fetchall()
     con.close()
 
-    if not stocks:
+    if not rows:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    q = ",".join([f"nse_cm|{r[1]}" for r in rows])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for q, s in zip(data, stocks):
-        symbol_eq = s[0]                # TCS-EQ
-        symbol = symbol_eq.replace("-EQ", "")  # TCS
-
-        o = q.get("ohlc", {})
+    for quote,(sym,_) in zip(data,rows):
+        base = sym.replace("-EQ","")
         out.append({
-            "symbol": symbol_eq,
-            "company_name": COMPANIES.get(symbol, symbol),
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": format_volume(q.get("last_volume", 0)),
-            "open": o.get("open", 0),
-            "high": o.get("high", 0),
-            "low": o.get("low", 0),
-            "close": o.get("close", 0)
+            "symbol": sym,
+            "company_name": COMPANY_MAP[base],
+            "ltp": float(quote.get("ltp",0)),
+            "pct": float(quote.get("per_change",0))
         })
 
     return jsonify(out)
 
-
 if __name__ == "__main__":
     app.run()
-
