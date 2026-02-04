@@ -17,6 +17,8 @@ SESSION = {}
 SCRIPS = []
 COMPANIES = {}
 
+# -------------------- DB --------------------
+
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -43,8 +45,11 @@ def init_db():
 
 init_db()
 
+# -------------------- LOGIN --------------------
+
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
+
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -66,14 +71,16 @@ def login():
 
 login()
 
-# Load scrip master
+# -------------------- LOAD MASTERS --------------------
+
 with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
-# Load company master
 with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
     for r in csv.DictReader(f):
-        COMPANIES[r["symbol"]] = r["company_name"]
+        COMPANIES[r["symbol"].strip()] = r["company_name"].strip()
+
+# -------------------- HELPERS --------------------
 
 def get_watchlists():
     con = db()
@@ -90,6 +97,12 @@ def format_volume(v):
     if v >= 1_000:
         return f"{v/1_000:.2f}K"
     return str(int(v))
+
+def nse_symbol(trading_symbol):
+    # TCS-EQ -> TCS
+    return trading_symbol.split("-")[0]
+
+# -------------------- ROUTES --------------------
 
 @app.route("/")
 def index():
@@ -142,6 +155,7 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
+
     con = db()
     stocks = con.execute(
         "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
@@ -157,9 +171,11 @@ def prices():
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
+
     for q, s in zip(data, stocks):
-        sym = s[0].replace("-EQ", "")
+        sym = nse_symbol(s[0])  # FIX IS HERE
         o = q.get("ohlc", {})
+
         out.append({
             "symbol": s[0],
             "company_name": COMPANIES.get(sym, sym),
@@ -171,6 +187,7 @@ def prices():
             "low": o.get("low", 0),
             "close": o.get("close", 0)
         })
+
     return jsonify(out)
 
 if __name__ == "__main__":
