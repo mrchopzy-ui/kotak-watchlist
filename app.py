@@ -1,163 +1,116 @@
-from flask import Flask, render_template, jsonify, request
-import csv, os, sqlite3, requests, pyotp
+const search = document.getElementById("search");
+const suggestions = document.getElementById("suggestions");
+const tbody = document.getElementById("watchlist");
+const addBtn = document.getElementById("addWatchlist");
 
-app = Flask(__name__)
+let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
+let priceTimer = null;
 
-ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
-MOBILE = os.getenv("KOTAK_MOBILE")
-USER_ID = os.getenv("KOTAK_USER_ID")
-MPIN = os.getenv("KOTAK_MPIN")
-TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
+/* ---------- ADD WATCHLIST ---------- */
+addBtn.onclick = async () => {
+    const name = prompt("New watchlist name:");
+    if (!name) return;
+    await fetch("/watchlist", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name})
+    });
+    location.reload();
+};
 
-DATA_FILE = "data/nse_eq_scrip_master.csv"
-DB_FILE = "watchlists.db"
+/* ---------- TAB SWITCH & RENAME ---------- */
+document.querySelectorAll(".tab[data-id]").forEach(tab => {
+    tab.onclick = () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeWatchlist = tab.dataset.id;
+        startPriceRefresh();
+    };
 
-SESSION = {}
-SCRIPS = []
+    tab.ondblclick = async () => {
+        const name = prompt("Rename watchlist:", tab.innerText);
+        if (!name) return;
+        await fetch(`/watchlist/${tab.dataset.id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name})
+        });
+        location.reload();
+    };
+});
 
-def db():
-    return sqlite3.connect(DB_FILE)
+/* ---------- SEARCH ---------- */
+search.addEventListener("input", async () => {
+    suggestions.innerHTML = "";
+    if (!search.value) return;
 
-def init_db():
-    con = db()
-    cur = con.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS watchlists(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS stocks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            watchlist_id INTEGER,
-            trading_symbol TEXT,
-            exchange_token TEXT
-        )
-    """)
-    cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
-    con.commit()
-    con.close()
+    const res = await fetch(`/search?q=${search.value}`);
+    const data = await res.json();
 
-init_db()
+    data.forEach(s => {
+        const d = document.createElement("div");
+        d.className = "suggestion-item";
+        d.innerText = s.trading_symbol;
+        d.onclick = async () => {
+            await fetch(`/add?wid=${activeWatchlist}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(s)
+            });
+            search.value = "";
+            suggestions.innerHTML = "";
+            loadPrices();
+        };
+        suggestions.appendChild(d);
+    });
+});
 
-def login():
-    totp = pyotp.TOTP(TOTP_SECRET).now()
-    r1 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
-        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
-    ).json()
+/* ---------- LOAD PRICES ---------- */
+async function loadPrices() {
+    const res = await fetch(`/prices?wid=${activeWatchlist}`);
+    const data = await res.json();
+    tbody.innerHTML = "";
 
-    r2 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"]
-        },
-        json={"mpin": MPIN}
-    ).json()
+    data.forEach(s => {
+        const tv = s.symbol.replace("-EQ", "");
+        tbody.innerHTML += `
+        <tr onclick="openChart('${tv}')">
+            <td>${s.symbol}</td>
+            <td>${s.company_name}</td>
+            <td>${s.ltp.toFixed(2)}</td>
+            <td>${s.pct.toFixed(2)}%</td>
+            <td>${s.volume}</td>
+            <td>${s.open}</td>
+            <td>${s.high}</td>
+            <td>${s.low}</td>
+            <td>${s.close}</td>
+            <td>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
+            </td>
+        </tr>`;
+    });
+}
 
-    SESSION["base"] = r2["data"]["baseUrl"]
+/* ---------- TRADINGVIEW ---------- */
+function openChart(sym) {
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
+}
 
-login()
+/* ---------- AUTO REFRESH ---------- */
+function startPriceRefresh() {
+    if (priceTimer) clearInterval(priceTimer);
+    loadPrices();
+    priceTimer = setInterval(loadPrices, 5000);
+}
 
-with open(DATA_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
+async function removeStock(sym) {
+    await fetch(`/remove?wid=${activeWatchlist}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({trading_symbol: sym})
+    });
+    loadPrices();
+}
 
-def get_watchlists():
-    con = db()
-    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
-    con.close()
-    return rows
-
-def format_volume(v):
-    v = float(v)
-    if v >= 1_000_000_000:
-        return f"{v/1_000_000_000:.2f}B"
-    if v >= 1_000_000:
-        return f"{v/1_000_000:.2f}M"
-    if v >= 1_000:
-        return f"{v/1_000:.2f}K"
-    return str(int(v))
-
-@app.route("/")
-def index():
-    return render_template("index.html", watchlists=get_watchlists())
-
-@app.route("/search")
-def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
-
-@app.route("/watchlist", methods=["POST"])
-def create_watchlist():
-    con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/add", methods=["POST"])
-def add_stock():
-    s = request.json
-    wid = request.args.get("wid")
-    con = db()
-    con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
-        VALUES (?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"]))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/remove", methods=["POST"])
-def remove_stock():
-    wid = request.args.get("wid")
-    sym = request.json["trading_symbol"]
-    con = db()
-    con.execute(
-        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (wid, sym)
-    )
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/prices")
-def prices():
-    wid = request.args.get("wid")
-    con = db()
-    stocks = con.execute(
-        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
-        (wid,)
-    ).fetchall()
-    con.close()
-
-    if not stocks:
-        return jsonify([])
-
-    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
-    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-
-    out = []
-    for q, s in zip(data, stocks):
-        o = q.get("ohlc", {})
-        out.append({
-            "symbol": s[0],
-            "company_name": q.get("instrumentName") or q.get("symbolName") or s[0],
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": format_volume(q.get("last_volume", 0)),
-            "open": o.get("open", 0),
-            "high": o.get("high", 0),
-            "low": o.get("low", 0),
-            "close": o.get("close", 0)
-        })
-    return jsonify(out)
-
-if __name__ == "__main__":
-    app.run()
+document.querySelector(".tab[data-id]").classList.add("active");
+startPriceRefresh();
