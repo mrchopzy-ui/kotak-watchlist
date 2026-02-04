@@ -1,51 +1,177 @@
-==> Deploying...
-==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
-==> Running 'gunicorn app:app'
-🔍 Loading NSE Company Master...
-📄 Detected CSV delimiter: ','
-📑 Detected headers: ['symbol', 'company_name']
-Traceback (most recent call last):
-  File "/opt/render/project/src/.venv/bin/gunicorn", line 8, in <module>
-    sys.exit(run())
-             ~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
-    WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 235, in run
-    super().run()
-    ~~~~~~~~~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 71, in run
-    Arbiter(self).run()
-    ~~~~~~~^^^^^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/arbiter.py", line 62, in __init__
-    self.setup(app)
-    ~~~~~~~~~~^^^^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/arbiter.py", line 127, in setup
-    self.app.wsgi()
-    ~~~~~~~~~~~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
-    self.callable = self.load()
-                    ~~~~~~~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
-    return self.load_wsgiapp()
-           ~~~~~~~~~~~~~~~~~^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
-    return util.import_app(self.app_uri)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/util.py", line 377, in import_app
-    mod = importlib.import_module(module)
-Menu
-  File "/opt/render/project/python/Python-3.13.4/lib/python3.13/importlib/__init__.py", line 88, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
-  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/opt/render/project/src/app.py", line 47, in <module>
-    raise Exception("❌ Required columns not found in CSV")
-Exception: ❌ Required columns not found in CSV
-==> Exited with status 1
-==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+from flask import Flask, render_template, jsonify, request
+import csv, os, sqlite3, requests, pyotp
+
+app = Flask(__name__)
+
+ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
+MOBILE = os.getenv("KOTAK_MOBILE")
+USER_ID = os.getenv("KOTAK_USER_ID")
+MPIN = os.getenv("KOTAK_MPIN")
+TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
+
+SCRIP_FILE = "data/nse_eq_scrip_master.csv"
+COMPANY_FILE = "data/nse_company_master.csv"
+DB_FILE = "watchlists.db"
+
+SESSION = {}
+SCRIPS = []
+COMPANIES = {}
+
+def db():
+    return sqlite3.connect(DB_FILE)
+
+def init_db():
+    con = db()
+    cur = con.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS watchlists(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS stocks(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            watchlist_id INTEGER,
+            trading_symbol TEXT,
+            exchange_token TEXT
+        )
+    """)
+    cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
+    con.commit()
+    con.close()
+
+init_db()
+
+def login():
+    totp = pyotp.TOTP(TOTP_SECRET).now()
+    r1 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
+        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
+    ).json()
+
+    r2 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
+        headers={
+            "Authorization": ACCESS_TOKEN,
+            "neo-fin-key": "neotradeapi",
+            "sid": r1["data"]["sid"],
+            "Auth": r1["data"]["token"]
+        },
+        json={"mpin": MPIN}
+    ).json()
+
+    SESSION["base"] = r2["data"]["baseUrl"]
+
+login()
+
+# Load scrip master
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
+
+# Load company master
+with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
+    for r in csv.DictReader(f):
+        COMPANIES[r["symbol"]] = r["company_name"]
+
+def get_watchlists():
+    con = db()
+    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
+    con.close()
+    return rows
+
+def format_volume(v):
+    v = float(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
+    return str(int(v))
+
+@app.route("/")
+def index():
+    return render_template("index.html", watchlists=get_watchlists())
+
+@app.route("/search")
+def search():
+    q = request.args.get("q", "").lower()
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+
+@app.route("/watchlist", methods=["POST"])
+def create_watchlist():
+    con = db()
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/watchlist/<int:wid>", methods=["PUT"])
+def rename_watchlist(wid):
+    con = db()
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/add", methods=["POST"])
+def add_stock():
+    s = request.json
+    con = db()
+    con.execute("""
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
+        VALUES (?, ?, ?)
+    """, (request.args.get("wid"), s["trading_symbol"], s["exchange_token"]))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    con = db()
+    con.execute(
+        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
+        (request.args.get("wid"), request.json["trading_symbol"])
+    )
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/prices")
+def prices():
+    wid = request.args.get("wid")
+    con = db()
+    stocks = con.execute(
+        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+        (wid,)
+    ).fetchall()
+    con.close()
+
+    if not stocks:
+        return jsonify([])
+
+    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+
+    out = []
+    for q, s in zip(data, stocks):
+        sym = s[0].replace("-EQ", "")
+        o = q.get("ohlc", {})
+        out.append({
+            "symbol": s[0],
+            "company_name": COMPANIES.get(sym, sym),
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
+        })
+    return jsonify(out)
+
+if __name__ == "__main__":
+    app.run()
