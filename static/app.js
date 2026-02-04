@@ -10,7 +10,6 @@ let priceTimer = null;
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
-
     await fetch("/watchlist", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -31,7 +30,6 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.ondblclick = async () => {
         const name = prompt("Rename watchlist:", tab.innerText);
         if (!name) return;
-
         await fetch(`/watchlist/${tab.dataset.id}`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
@@ -53,7 +51,6 @@ search.addEventListener("input", async () => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
         d.innerText = s.trading_symbol;
-
         d.onclick = async () => {
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
@@ -72,14 +69,12 @@ search.addEventListener("input", async () => {
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
-
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const tvSymbol = s.symbol.replace("-EQ", "");
-
+        const tv = s.symbol.replace("-EQ", "");
         tbody.innerHTML += `
-        <tr onclick="openChart('${tvSymbol}')">
+        <tr onclick="openChart('${tv}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -90,17 +85,15 @@ async function loadPrices() {
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">
-                    ✕
-                </button>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
             </td>
         </tr>`;
     });
 }
 
 /* ---------- TRADINGVIEW ---------- */
-function openChart(symbol) {
-    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`, "_blank");
+function openChart(sym) {
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
 }
 
 /* ---------- AUTO REFRESH ---------- */
@@ -110,7 +103,6 @@ function startPriceRefresh() {
     priceTimer = setInterval(loadPrices, 5000);
 }
 
-/* ---------- REMOVE STOCK ---------- */
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
