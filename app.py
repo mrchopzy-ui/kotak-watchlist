@@ -1,185 +1,51 @@
-from flask import Flask, render_template, jsonify, request
-import csv, sqlite3, os, requests, pyotp, io
-
-app = Flask(__name__)
-
-ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
-MOBILE = os.getenv("KOTAK_MOBILE")
-USER_ID = os.getenv("KOTAK_USER_ID")
-MPIN = os.getenv("KOTAK_MPIN")
-TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
-
-SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-COMPANY_FILE = "data/nse_company_master.csv"
-DB_FILE = "watchlists.db"
-
-SESSION = {}
-
-# ================= LOAD COMPANY MASTER (BULLETPROOF) =================
-
-print("🔍 Loading NSE Company Master...")
-
-if not os.path.exists(COMPANY_FILE):
-    raise Exception(f"❌ FILE NOT FOUND: {COMPANY_FILE}")
-
-# Read raw text safely (handles BOM)
-with open(COMPANY_FILE, "r", encoding="utf-8-sig") as f:
-    raw = f.read()
-
-# Detect delimiter
-delimiter = "," if raw.count(",") > raw.count(";") else ";"
-print(f"📄 Detected CSV delimiter: '{delimiter}'")
-
-reader = csv.DictReader(io.StringIO(raw), delimiter=delimiter)
-headers = [h.strip() for h in reader.fieldnames or []]
-
-print(f"📑 Detected headers: {headers}")
-
-# Normalize header names
-def norm(s):
-    return s.lower().replace(" ", "").replace("_", "")
-
-header_map = {norm(h): h for h in headers}
-
-required = ["symbol", "nameofcompany"]
-
-if not all(k in header_map for k in required):
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Running 'gunicorn app:app'
+🔍 Loading NSE Company Master...
+📄 Detected CSV delimiter: ','
+📑 Detected headers: ['symbol', 'company_name']
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/gunicorn", line 8, in <module>
+    sys.exit(run())
+             ~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+    WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 235, in run
+    super().run()
+    ~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 71, in run
+    Arbiter(self).run()
+    ~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/arbiter.py", line 62, in __init__
+    self.setup(app)
+    ~~~~~~~~~~^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/arbiter.py", line 127, in setup
+    self.app.wsgi()
+    ~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/util.py", line 377, in import_app
+    mod = importlib.import_module(module)
+Menu
+  File "/opt/render/project/python/Python-3.13.4/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/app.py", line 47, in <module>
     raise Exception("❌ Required columns not found in CSV")
-
-sym_col = header_map["symbol"]
-name_col = header_map["nameofcompany"]
-
-COMPANY_MAP = {}
-
-for r in reader:
-    sym = r.get(sym_col, "").strip()
-    name = r.get(name_col, "").strip()
-    if sym and name:
-        COMPANY_MAP[sym] = name
-
-print(f"✅ Loaded {len(COMPANY_MAP)} company names")
-
-# Hard validation
-if len(COMPANY_MAP) < 1000:
-    raise Exception("❌ Company master looks incomplete (<1000 rows)")
-
-if "TCS" not in COMPANY_MAP:
-    raise Exception("❌ TCS NOT FOUND in company master")
-
-print(f"🧪 TCS → {COMPANY_MAP['TCS']}")
-
-# ================= LOAD SCRIP MASTER =================
-
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
-
-# ================= DATABASE =================
-
-def db():
-    return sqlite3.connect(DB_FILE)
-
-def init_db():
-    con = db()
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS watchlists(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS stocks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            watchlist_id INTEGER,
-            trading_symbol TEXT,
-            exchange_token TEXT
-        )
-    """)
-    con.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
-    con.commit()
-    con.close()
-
-init_db()
-
-# ================= KOTAK LOGIN =================
-
-def login():
-    totp = pyotp.TOTP(TOTP_SECRET).now()
-
-    r1 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
-        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
-    ).json()
-
-    r2 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"]
-        },
-        json={"mpin": MPIN}
-    ).json()
-
-    SESSION["base"] = r2["data"]["baseUrl"]
-
-login()
-
-# ================= ROUTES =================
-
-@app.route("/")
-def index():
-    con = db()
-    w = con.execute("SELECT id,name FROM watchlists").fetchall()
-    con.close()
-    return render_template("index.html", watchlists=w)
-
-@app.route("/search")
-def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
-
-@app.route("/add", methods=["POST"])
-def add():
-    s = request.json
-    con = db()
-    con.execute(
-        "INSERT INTO stocks(watchlist_id,trading_symbol,exchange_token) VALUES (?,?,?)",
-        (request.args.get("wid"), s["trading_symbol"], s["exchange_token"])
-    )
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/prices")
-def prices():
-    wid = request.args.get("wid")
-    con = db()
-    rows = con.execute(
-        "SELECT trading_symbol,exchange_token FROM stocks WHERE watchlist_id=?",
-        (wid,)
-    ).fetchall()
-    con.close()
-
-    if not rows:
-        return jsonify([])
-
-    q = ",".join([f"nse_cm|{r[1]}" for r in rows])
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{q}/all"
-    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
-
-    out = []
-    for quote, (sym, _) in zip(data, rows):
-        base = sym.replace("-EQ", "")
-        out.append({
-            "symbol": sym,
-            "company_name": COMPANY_MAP[base],
-            "ltp": float(quote.get("ltp", 0)),
-            "pct": float(quote.get("per_change", 0))
-        })
-
-    return jsonify(out)
-
-if __name__ == "__main__":
-    app.run()
+Exception: ❌ Required columns not found in CSV
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
