@@ -10,14 +10,10 @@ MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-COMPANY_FILE = "data/nse_company_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
 SCRIPS = []
-COMPANIES = {}
-
-# -------------------- DB --------------------
 
 def db():
     return sqlite3.connect(DB_FILE)
@@ -25,27 +21,29 @@ def db():
 def init_db():
     con = db()
     cur = con.cursor()
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS watchlists(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE
         )
     """)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS stocks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             watchlist_id INTEGER,
             trading_symbol TEXT,
-            exchange_token TEXT
+            exchange_token TEXT,
+            company_name TEXT
         )
     """)
+
     cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
     con.commit()
     con.close()
 
 init_db()
-
-# -------------------- LOGIN --------------------
 
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
@@ -71,38 +69,33 @@ def login():
 
 login()
 
-# -------------------- LOAD MASTERS --------------------
-
 with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
-with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
-    for r in csv.DictReader(f):
-        COMPANIES[r["symbol"].strip()] = r["company_name"].strip()
+def get_company_name_from_nse(symbol):
+    sym = symbol.replace("-EQ", "")
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://www.nseindia.com"
+    })
 
-# -------------------- HELPERS --------------------
+    session.get("https://www.nseindia.com", timeout=10)
+    r = session.get(
+        f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
+        timeout=10
+    )
+
+    if r.status_code != 200:
+        return sym
+
+    return r.json().get("info", {}).get("companyName", sym)
 
 def get_watchlists():
     con = db()
     rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
     con.close()
     return rows
-
-def format_volume(v):
-    v = float(v)
-    if v >= 1_000_000_000:
-        return f"{v/1_000_000_000:.2f}B"
-    if v >= 1_000_000:
-        return f"{v/1_000_000:.2f}M"
-    if v >= 1_000:
-        return f"{v/1_000:.2f}K"
-    return str(int(v))
-
-def nse_symbol(trading_symbol):
-    # TCS-EQ -> TCS
-    return trading_symbol.split("-")[0]
-
-# -------------------- ROUTES --------------------
 
 @app.route("/")
 def index():
@@ -121,33 +114,19 @@ def create_watchlist():
     con.close()
     return "", 204
 
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename_watchlist(wid):
-    con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
-    con.commit()
-    con.close()
-    return "", 204
-
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
+    wid = request.args.get("wid")
+
+    company = get_company_name_from_nse(s["trading_symbol"])
+
     con = db()
     con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
-        VALUES (?, ?, ?)
-    """, (request.args.get("wid"), s["trading_symbol"], s["exchange_token"]))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/remove", methods=["POST"])
-def remove_stock():
-    con = db()
-    con.execute(
-        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (request.args.get("wid"), request.json["trading_symbol"])
-    )
+        INSERT INTO stocks
+        (watchlist_id, trading_symbol, exchange_token, company_name)
+        VALUES (?, ?, ?, ?)
+    """, (wid, s["trading_symbol"], s["exchange_token"], company))
     con.commit()
     con.close()
     return "", 204
@@ -155,12 +134,11 @@ def remove_stock():
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
-
     con = db()
-    stocks = con.execute(
-        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
-        (wid,)
-    ).fetchall()
+    stocks = con.execute("""
+        SELECT trading_symbol, exchange_token, company_name
+        FROM stocks WHERE watchlist_id=?
+    """, (wid,)).fetchall()
     con.close()
 
     if not stocks:
@@ -171,21 +149,12 @@ def prices():
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-
     for q, s in zip(data, stocks):
-        sym = nse_symbol(s[0])  # FIX IS HERE
-        o = q.get("ohlc", {})
-
         out.append({
             "symbol": s[0],
-            "company_name": COMPANIES.get(sym, sym),
+            "company_name": s[2],
             "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": format_volume(q.get("last_volume", 0)),
-            "open": o.get("open", 0),
-            "high": o.get("high", 0),
-            "low": o.get("low", 0),
-            "close": o.get("close", 0)
+            "pct": float(q.get("per_change", 0))
         })
 
     return jsonify(out)
