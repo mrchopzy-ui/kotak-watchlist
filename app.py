@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-import csv, sqlite3, os, requests, pyotp
+import csv, sqlite3, os, requests, pyotp, io
 
 app = Flask(__name__)
 
@@ -15,35 +15,47 @@ DB_FILE = "watchlists.db"
 
 SESSION = {}
 
-# ================= LOAD COMPANY MASTER (ROBUST) =================
+# ================= LOAD COMPANY MASTER (BULLETPROOF) =================
 
 print("🔍 Loading NSE Company Master...")
 
 if not os.path.exists(COMPANY_FILE):
     raise Exception(f"❌ FILE NOT FOUND: {COMPANY_FILE}")
 
+# Read raw text safely (handles BOM)
+with open(COMPANY_FILE, "r", encoding="utf-8-sig") as f:
+    raw = f.read()
+
+# Detect delimiter
+delimiter = "," if raw.count(",") > raw.count(";") else ";"
+print(f"📄 Detected CSV delimiter: '{delimiter}'")
+
+reader = csv.DictReader(io.StringIO(raw), delimiter=delimiter)
+headers = [h.strip() for h in reader.fieldnames or []]
+
+print(f"📑 Detected headers: {headers}")
+
+# Normalize header names
+def norm(s):
+    return s.lower().replace(" ", "").replace("_", "")
+
+header_map = {norm(h): h for h in headers}
+
+required = ["symbol", "nameofcompany"]
+
+if not all(k in header_map for k in required):
+    raise Exception("❌ Required columns not found in CSV")
+
+sym_col = header_map["symbol"]
+name_col = header_map["nameofcompany"]
+
 COMPANY_MAP = {}
 
-with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-
-    headers = [h.upper().strip() for h in reader.fieldnames or []]
-
-    # Detect column names dynamically
-    if "SYMBOL" in headers and "NAME OF COMPANY" in headers:
-        sym_key = "SYMBOL"
-        name_key = "NAME OF COMPANY"
-    elif "symbol" in reader.fieldnames and "company_name" in reader.fieldnames:
-        sym_key = "symbol"
-        name_key = "company_name"
-    else:
-        raise Exception(f"❌ Unknown CSV headers: {reader.fieldnames}")
-
-    for r in reader:
-        sym = r.get(sym_key, "").strip()
-        name = r.get(name_key, "").strip()
-        if sym and name:
-            COMPANY_MAP[sym] = name
+for r in reader:
+    sym = r.get(sym_col, "").strip()
+    name = r.get(name_col, "").strip()
+    if sym and name:
+        COMPANY_MAP[sym] = name
 
 print(f"✅ Loaded {len(COMPANY_MAP)} company names")
 
@@ -158,13 +170,13 @@ def prices():
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
-    for quote,(sym,_) in zip(data,rows):
-        base = sym.replace("-EQ","")
+    for quote, (sym, _) in zip(data, rows):
+        base = sym.replace("-EQ", "")
         out.append({
             "symbol": sym,
             "company_name": COMPANY_MAP[base],
-            "ltp": float(quote.get("ltp",0)),
-            "pct": float(quote.get("per_change",0))
+            "ltp": float(quote.get("ltp", 0)),
+            "pct": float(quote.get("per_change", 0))
         })
 
     return jsonify(out)
