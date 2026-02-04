@@ -15,7 +15,7 @@ DB_FILE = "watchlists.db"
 
 SESSION = {}
 
-# ================= COMPANY MASTER (STRICT LOAD) =================
+# ================= LOAD COMPANY MASTER (ROBUST) =================
 
 print("🔍 Loading NSE Company Master...")
 
@@ -26,15 +26,28 @@ COMPANY_MAP = {}
 
 with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
+
+    headers = [h.upper().strip() for h in reader.fieldnames or []]
+
+    # Detect column names dynamically
+    if "SYMBOL" in headers and "NAME OF COMPANY" in headers:
+        sym_key = "SYMBOL"
+        name_key = "NAME OF COMPANY"
+    elif "symbol" in reader.fieldnames and "company_name" in reader.fieldnames:
+        sym_key = "symbol"
+        name_key = "company_name"
+    else:
+        raise Exception(f"❌ Unknown CSV headers: {reader.fieldnames}")
+
     for r in reader:
-        sym = r.get("symbol", "").strip()
-        name = r.get("company_name", "").strip()
+        sym = r.get(sym_key, "").strip()
+        name = r.get(name_key, "").strip()
         if sym and name:
             COMPANY_MAP[sym] = name
 
 print(f"✅ Loaded {len(COMPANY_MAP)} company names")
 
-# HARD VALIDATION
+# Hard validation
 if len(COMPANY_MAP) < 1000:
     raise Exception("❌ Company master looks incomplete (<1000 rows)")
 
