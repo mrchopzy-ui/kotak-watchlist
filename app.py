@@ -10,7 +10,7 @@ MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-COMPANY_FILE = "data/nse_company_master.csv"
+COMPANY_FILE = ""data/company_names_tv.csv""
 DB_FILE = "watchlists.db"
 
 SESSION = {}
@@ -175,3 +175,4 @@ def prices():
 
 if __name__ == "__main__":
     app.run()
+
