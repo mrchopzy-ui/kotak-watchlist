@@ -3,4 +3,3 @@ requests
 pyotp
 gunicorn
 psycopg2-binary
-sqlite3
