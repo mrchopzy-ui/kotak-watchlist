@@ -3,18 +3,22 @@ import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
+# ---------- ENV ----------
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-DATA_FILE = "data/nse_eq_scrip_master.csv"
 DB_FILE = "watchlists.db"
+SCRIP_FILE = "data/nse_eq_scrip_master.csv"
+EQUITY_FILE = "data/EQUITY_L.csv"
 
 SESSION = {}
 SCRIPS = []
+COMPANY_MAP = {}
 
+# ---------- DB ----------
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -41,8 +45,10 @@ def init_db():
 
 init_db()
 
+# ---------- LOGIN ----------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
+
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -64,9 +70,20 @@ def login():
 
 login()
 
-with open(DATA_FILE, newline="", encoding="utf-8") as f:
+# ---------- LOAD SCRIP MASTER ----------
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
+# ---------- LOAD EQUITY_L COMPANY NAMES ----------
+with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for r in reader:
+        sym = r.get("SYMBOL") or r.get("Symbol")
+        name = r.get("NAME") or r.get("Name")
+        if sym and name:
+            COMPANY_MAP[sym.strip().upper()] = name.strip()
+
+# ---------- HELPERS ----------
 def get_watchlists():
     con = db()
     rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
@@ -83,6 +100,11 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
+def get_company_name(trading_symbol):
+    base = trading_symbol.replace("-EQ", "").upper()
+    return COMPANY_MAP.get(base, base)
+
+# ---------- ROUTES ----------
 @app.route("/")
 def index():
     return render_template("index.html", watchlists=get_watchlists())
@@ -154,7 +176,7 @@ def prices():
         o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company_name": q.get("instrumentName", s[0].replace("-EQ", "")),
+            "company_name": get_company_name(s[0]),
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
@@ -163,6 +185,7 @@ def prices():
             "low": o.get("low", 0),
             "close": o.get("close", 0)
         })
+
     return jsonify(out)
 
 if __name__ == "__main__":
