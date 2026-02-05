@@ -1,299 +1,52 @@
-diff --git a/templates/docs.html b/templates/docs.html
-new file mode 100644
-index 0000000000000000000000000000000000000000..aa6317dd6e5fa399fde354e9b8005ab04b399c70
---- /dev/null
-+++ b/templates/docs.html
-@@ -0,0 +1,293 @@
-+<!DOCTYPE html>
-+<html>
-+<head>
-+    <title>Kotak Trade API - Documentation</title>
-+    <link rel="stylesheet" href="/static/style.css">
-+</head>
-+<body>
-+
-+<header class="top-bar">
-+    <div class="top-bar__content">
-+        <h1>Kotak Trade API</h1>
-+        <nav class="top-bar__nav">
-+            <a href="/" class="top-bar__link">Watchlist</a>
-+            <a href="/docs" class="top-bar__link">API Docs</a>
-+        </nav>
-+    </div>
-+</header>
-+
-+<main class="docs">
-+    <section class="doc-hero">
-+        <h2>Login with TOTP Overview</h2>
-+        <p>
-+            The Kotak Securities Trade API uses Time-based One-Time Passwords (TOTP) for secure
-+            authentication. The flow is a three-step process: register a TOTP device, validate the
-+            TOTP to receive a view token, and validate MPIN to receive a trade token.
-+        </p>
-+        <div class="doc-callout">
-+            <strong>Required:</strong> Access token from the NEO App API Dashboard (plain token in
-+            <code>Authorization</code> headers).
-+        </div>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Step 1: Register for TOTP (one time)</h3>
-+        <ol>
-+            <li>Open NEO → API Dashboard → TOTP Registration.</li>
-+            <li>Verify with mobile number, OTP, and client code.</li>
-+            <li>Scan the QR code with Google/Microsoft Authenticator.</li>
-+            <li>Enter the generated TOTP to confirm registration.</li>
-+        </ol>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Step 2: TOTP Login (tradeApiLogin)</h3>
-+        <p>
-+            Authenticate using mobile number, UCC, and a 6-digit TOTP. On success you receive a
-+            view token and view SID that are used in the MPIN validation step.
-+        </p>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Endpoint</h4>
-+                <code>POST https://mis.kotaksecurities.com/login/1.0/tradeApiLogin</code>
-+            </div>
-+            <div>
-+                <h4>Headers</h4>
-+                <table class="doc-table">
-+                    <tr><th>Name</th><th>Value</th></tr>
-+                    <tr><td>Authorization</td><td>&lt;access_token&gt; (plain)</td></tr>
-+                    <tr><td>neo-fin-key</td><td>neotradeapi</td></tr>
-+                    <tr><td>Content-Type</td><td>application/json</td></tr>
-+                </table>
-+            </div>
-+        </div>
-+        <pre><code>curl -X POST "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin" \
-+  -H "Authorization: &lt;access_token&gt;" \
-+  -H "neo-fin-key: neotradeapi" \
-+  -H "Content-Type: application/json" \
-+  -d '{
-+    "mobileNumber": "&lt;+91XXXXXXXXXX&gt;",
-+    "ucc": "&lt;client_code&gt;",
-+    "totp": "&lt;6_digit_totp&gt;"
-+  }'</code></pre>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Step 3: Validate MPIN (tradeApiValidate)</h3>
-+        <p>
-+            Provide your 6-digit MPIN along with the view token and view SID. The response includes
-+            a trade token (Auth), session SID, and <code>baseUrl</code> for all post-login APIs.
-+        </p>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Endpoint</h4>
-+                <code>POST https://mis.kotaksecurities.com/login/1.0/tradeApiValidate</code>
-+            </div>
-+            <div>
-+                <h4>Headers</h4>
-+                <table class="doc-table">
-+                    <tr><th>Name</th><th>Value</th></tr>
-+                    <tr><td>Authorization</td><td>&lt;access_token&gt; (plain)</td></tr>
-+                    <tr><td>neo-fin-key</td><td>neotradeapi</td></tr>
-+                    <tr><td>sid</td><td>&lt;view_sid&gt;</td></tr>
-+                    <tr><td>Auth</td><td>&lt;view_token&gt;</td></tr>
-+                    <tr><td>Content-Type</td><td>application/json</td></tr>
-+                </table>
-+            </div>
-+        </div>
-+        <pre><code>curl -X POST "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate" \
-+  -H "Authorization: &lt;access_token&gt;" \
-+  -H "neo-fin-key: neotradeapi" \
-+  -H "sid: &lt;view_sid&gt;" \
-+  -H "Auth: &lt;view_token&gt;" \
-+  -H "Content-Type: application/json" \
-+  -d '{ "mpin": "&lt;mpin&gt;" }'</code></pre>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Common Response Fields</h3>
-+        <table class="doc-table">
-+            <tr><th>Field</th><th>Description</th></tr>
-+            <tr><td>token</td><td>JWT token. View token for step 2, Trade token for step 3.</td></tr>
-+            <tr><td>sid</td><td>Session ID (view or trade).</td></tr>
-+            <tr><td>rid</td><td>Request ID for tracking.</td></tr>
-+            <tr><td>baseUrl</td><td>Base URL to use for all post-login APIs.</td></tr>
-+            <tr><td>kType</td><td>View (step 2) or Trade (step 3).</td></tr>
-+            <tr><td>status</td><td>success or error.</td></tr>
-+        </table>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Scrip Master API</h3>
-+        <p>Download the latest scrip master CSV links for all segments.</p>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Endpoint</h4>
-+                <code>GET &lt;baseUrl&gt;/script-details/1.0/masterscrip/file-paths</code>
-+            </div>
-+            <div>
-+                <h4>Headers</h4>
-+                <table class="doc-table">
-+                    <tr><th>Name</th><th>Value</th></tr>
-+                    <tr><td>Authorization</td><td>&lt;access_token&gt; (plain)</td></tr>
-+                </table>
-+            </div>
-+        </div>
-+        <pre><code>curl --location "&lt;baseUrl&gt;/script-details/1.0/masterscrip/file-paths" \
-+  --header "Authorization: &lt;access_token&gt;"</code></pre>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Orders</h3>
-+        <div class="doc-card">
-+            <h4>Place Order</h4>
-+            <p><code>POST &lt;baseUrl&gt;/quick/order/rule/ms/place</code></p>
-+            <pre><code>curl -X POST "&lt;baseUrl&gt;/quick/order/rule/ms/place" \
-+  -H "Auth: &lt;session_token&gt;" \
-+  -H "Sid: &lt;session_sid&gt;" \
-+  -H "neo-fin-key: neotradeapi" \
-+  -H "Content-Type: application/x-www-form-urlencoded" \
-+  --data-urlencode 'jData={
-+    "am": "NO",
-+    "dq": "0",
-+    "es": "nse_cm",
-+    "mp": "0",
-+    "pc": "CNC",
-+    "pf": "N",
-+    "pr": "0",
-+    "pt": "MKT",
-+    "qt": "1",
-+    "rt": "DAY",
-+    "tp": "0",
-+    "ts": "ITBEES-EQ",
-+    "tt": "B"
-+  }'</code></pre>
-+        </div>
-+
-+        <div class="doc-card">
-+            <h4>Modify Order</h4>
-+            <p><code>POST &lt;baseUrl&gt;/quick/order/vr/modify</code></p>
-+            <pre><code>curl -X POST "&lt;baseUrl&gt;/quick/order/vr/modify" \
-+  -H "Auth: &lt;session_token&gt;" \
-+  -H "Sid: &lt;session_sid&gt;" \
-+  -H "neo-fin-key: neotradeapi" \
-+  -H "Content-Type: application/x-www-form-urlencoded" \
-+  --data-urlencode 'jData={
-+    "am": "NO",
-+    "dq": "0",
-+    "es": "nse_cm",
-+    "mp": "0",
-+    "pc": "NRML",
-+    "pf": "N",
-+    "pr": "0",
-+    "pt": "MKT",
-+    "qt": "1",
-+    "rt": "DAY",
-+    "tp": "0",
-+    "ts": "TATAPOWER-EQ",
-+    "tt": "B",
-+    "no": "&lt;orderNo&gt;"
-+  }'</code></pre>
-+        </div>
-+
-+        <div class="doc-card">
-+            <h4>Cancel / Exit</h4>
-+            <p>Use the right endpoint for regular, BO, or CO orders.</p>
-+            <pre><code>curl -X POST "&lt;baseUrl&gt;/quick/order/cancel" \
-+  -H "Auth: &lt;session_token&gt;" \
-+  -H "Sid: &lt;session_sid&gt;" \
-+  -H "neo-fin-key: neotradeapi" \
-+  -H "Content-Type: application/x-www-form-urlencoded" \
-+  --data-urlencode 'jData={"on":"&lt;orderNo&gt;","am":"NO"}'</code></pre>
-+        </div>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Order Reports</h3>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Order Book</h4>
-+                <code>GET &lt;baseUrl&gt;/quick/user/orders</code>
-+            </div>
-+            <div>
-+                <h4>Order History</h4>
-+                <code>POST &lt;baseUrl&gt;/quick/order/history</code>
-+            </div>
-+            <div>
-+                <h4>Trade Book</h4>
-+                <code>GET &lt;baseUrl&gt;/quick/user/trades</code>
-+            </div>
-+        </div>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Positions &amp; Holdings</h3>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Positions</h4>
-+                <code>GET &lt;baseUrl&gt;/quick/user/positions</code>
-+            </div>
-+            <div>
-+                <h4>Holdings</h4>
-+                <code>GET &lt;baseUrl&gt;/portfolio/v1/holdings</code>
-+            </div>
-+        </div>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Limits &amp; Margin Check</h3>
-+        <div class="doc-grid">
-+            <div>
-+                <h4>Limits</h4>
-+                <code>POST &lt;baseUrl&gt;/quick/user/limits</code>
-+            </div>
-+            <div>
-+                <h4>Check Margin</h4>
-+                <code>POST &lt;baseUrl&gt;/quick/user/check-margin</code>
-+            </div>
-+        </div>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Quotes API</h3>
-+        <p>
-+            Use exchange segment + instrument token (or index name) separated by a pipe. Multiple
-+            instruments are comma-separated.
-+        </p>
-+        <pre><code>curl -X GET "&lt;baseUrl&gt;/script-details/1.0/quotes/neosymbol/nse_cm|Nifty 50,nse_cm|Nifty Bank/all" \
-+  -H "Content-Type: application/json" \
-+  -H "Authorization: &lt;access_token&gt;"</code></pre>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Websocket Overview</h3>
-+        <ul>
-+            <li>Use the session token, session SID, and data center from tradeApiValidate.</li>
-+            <li>HSM stream is for market data, HSI stream is for order updates.</li>
-+            <li>Max channels: 16. Max scrip subscriptions: 200.</li>
-+        </ul>
-+    </section>
-+
-+    <section class="doc-section">
-+        <h3>Quick FAQs</h3>
-+        <div class="doc-card">
-+            <h4>Which headers do I pass?</h4>
-+            <p>
-+                Login APIs use <code>Authorization</code> + <code>neo-fin-key</code>. Post-login
-+                APIs use <code>Auth</code> + <code>Sid</code> + <code>neo-fin-key</code>. Quotes and
-+                Scripmaster only use <code>Authorization</code>.
-+            </p>
-+        </div>
-+        <div class="doc-card">
-+            <h4>Do I use Bearer?</h4>
-+            <p>No. Always send the token as a plain string.</p>
-+        </div>
-+        <div class="doc-card">
-+            <h4>Rate limits</h4>
-+            <p>10 requests/second across APIs.</p>
-+        </div>
-+    </section>
-+</main>
-+
-+</body>
-+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="top-bar">
+    <h1>Nexus Asset Management</h1>
+</header>
+
+<div class="container">
+
+    <div class="tabs">
+        {% for w in watchlists %}
+            <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
+        {% endfor %}
+        <button class="tab add" id="addWatchlist">＋</button>
+    </div>
+
+    <div class="search-box">
+        <input id="search" placeholder="Type stock symbol (e.g. TCS)">
+        <div id="suggestions"></div>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Company Name</th>
+                    <th>LTP</th>
+                    <th>%</th>
+                    <th>Volume</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody id="watchlist"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
