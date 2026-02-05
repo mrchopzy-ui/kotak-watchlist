@@ -1,52 +1,74 @@
 body {
-  font-family: Arial;
-  background:#0f172a;
-  color:#e5e7eb;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
 }
 
-header {
-  padding:15px;
+.top-bar {
+    background: #0b1c2d;
+    color: white;
+    padding: 15px 30px;
 }
 
-h1 {
-  margin:0 0 10px;
+.tabs {
+    background: white;
+    padding: 10px 30px;
 }
 
-input {
-  padding:8px;
-  width:300px;
+.tab {
+    padding: 6px 14px;
+    margin-right: 6px;
+    border-radius: 6px;
+    border: none;
+    background: #e9ecf1;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: #0b1c2d;
+    color: white;
+}
+
+.tab.add {
+    font-weight: bold;
+}
+
+.search-box {
+    margin: 20px 30px;
+    position: relative;
+    width: 300px;
+}
+
+#search {
+    width: 100%;
+    padding: 10px;
 }
 
 #suggestions {
-  background:#020617;
-  position:absolute;
-  width:300px;
+    position: absolute;
+    background: white;
+    width: 100%;
+    border: 1px solid #ccc;
+    z-index: 10;
 }
 
-#suggestions div {
-  padding:6px;
-  cursor:pointer;
+.suggestion-item {
+    padding: 8px;
+    cursor: pointer;
 }
 
-#suggestions div:hover {
-  background:#1e293b;
+.suggestion-item:hover {
+    background: #eef2f7;
 }
 
 table {
-  width:100%;
-  border-collapse:collapse;
-  margin-top:20px;
+    margin: 0 30px 30px;
+    width: calc(100% - 60px);
+    background: white;
+    border-collapse: collapse;
 }
 
 th, td {
-  padding:8px;
-  border-bottom:1px solid #334155;
-}
-
-.up { color:#22c55e; }
-.dn { color:#ef4444; }
-
-tr:hover {
-  background:#1e293b;
-  cursor:pointer;
+    padding: 10px;
+    text-align: center;
 }
