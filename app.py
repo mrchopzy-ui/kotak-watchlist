@@ -9,13 +9,11 @@ USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-COMPANY_FILE = ""data/company_names_tv.csv""
+DATA_FILE = "data/nse_eq_scrip_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
 SCRIPS = []
-COMPANIES = {}
 
 def db():
     return sqlite3.connect(DB_FILE)
@@ -66,14 +64,8 @@ def login():
 
 login()
 
-# Load scrip master
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+with open(DATA_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
-
-# Load company master
-with open(COMPANY_FILE, newline="", encoding="utf-8") as f:
-    for r in csv.DictReader(f):
-        COMPANIES[r["symbol"]] = r["company_name"]
 
 def get_watchlists():
     con = db()
@@ -119,11 +111,12 @@ def rename_watchlist(wid):
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
+    wid = request.args.get("wid")
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
         VALUES (?, ?, ?)
-    """, (request.args.get("wid"), s["trading_symbol"], s["exchange_token"]))
+    """, (wid, s["trading_symbol"], s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
@@ -158,11 +151,10 @@ def prices():
 
     out = []
     for q, s in zip(data, stocks):
-        sym = s[0].replace("-EQ", "")
         o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company_name": COMPANIES.get(sym, sym),
+            "company_name": q.get("instrumentName", s[0].replace("-EQ", "")),
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
@@ -175,4 +167,3 @@ def prices():
 
 if __name__ == "__main__":
     app.run()
-
