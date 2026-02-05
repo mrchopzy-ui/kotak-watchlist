@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+.env
+
+# Local databases
+*.db
+watchlist.json
+
+# OS
+.DS_Store
+Thumbs.db
