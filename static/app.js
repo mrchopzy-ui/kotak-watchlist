@@ -4,9 +4,8 @@ const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
-let priceTimer = null;
+let timer = null;
 
-/* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
@@ -18,13 +17,12 @@ addBtn.onclick = async () => {
     location.reload();
 };
 
-/* ---------- TAB SWITCH & RENAME ---------- */
 document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.onclick = () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
-        startPriceRefresh();
+        start();
     };
 
     tab.ondblclick = async () => {
@@ -39,8 +37,7 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
     };
 });
 
-/* ---------- SEARCH ---------- */
-search.addEventListener("input", async () => {
+search.oninput = async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
 
@@ -59,14 +56,13 @@ search.addEventListener("input", async () => {
             });
             search.value = "";
             suggestions.innerHTML = "";
-            loadPrices();
+            load();
         };
         suggestions.appendChild(d);
     });
-});
+};
 
-/* ---------- LOAD PRICES ---------- */
-async function loadPrices() {
+async function load() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
     tbody.innerHTML = "";
@@ -74,7 +70,7 @@ async function loadPrices() {
     data.forEach(s => {
         const tv = s.symbol.replace("-EQ", "");
         tbody.innerHTML += `
-        <tr onclick="openChart('${tv}')">
+        <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${tv}','_blank')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -85,32 +81,26 @@ async function loadPrices() {
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
+                <button onclick="event.stopPropagation(); remove('${s.symbol}')">✕</button>
             </td>
         </tr>`;
     });
 }
 
-/* ---------- TRADINGVIEW ---------- */
-function openChart(sym) {
-    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
-}
-
-/* ---------- AUTO REFRESH ---------- */
-function startPriceRefresh() {
-    if (priceTimer) clearInterval(priceTimer);
-    loadPrices();
-    priceTimer = setInterval(loadPrices, 5000);
-}
-
-async function removeStock(sym) {
+async function remove(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
-    loadPrices();
+    load();
+}
+
+function start() {
+    if (timer) clearInterval(timer);
+    load();
+    timer = setInterval(load, 5000);
 }
 
 document.querySelector(".tab[data-id]").classList.add("active");
-startPriceRefresh();
+start();
