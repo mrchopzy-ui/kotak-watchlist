@@ -1,166 +1,169 @@
-import os
-import csv
-import json
-import sqlite3
-import requests
-from flask import Flask, render_template, request, jsonify, g
-
-# =========================================================
-# APP SETUP
-# =========================================================
+from flask import Flask, render_template, jsonify, request
+import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-DB_PATH = os.path.join(BASE_DIR, "watchlists.db")
-COMPANY_MASTER = os.path.join(DATA_DIR, "company_master.csv")
+ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
+MOBILE = os.getenv("KOTAK_MOBILE")
+USER_ID = os.getenv("KOTAK_USER_ID")
+MPIN = os.getenv("KOTAK_MPIN")
+TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-os.makedirs(DATA_DIR, exist_ok=True)
+DATA_FILE = "data/nse_eq_scrip_master.csv"
+DB_FILE = "watchlists.db"
 
-IS_RENDER = os.environ.get("RENDER") == "true"
+SESSION = {}
+SCRIPS = []
 
-# =========================================================
-# DATABASE
-# =========================================================
-
-def get_db():
-    if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-@app.teardown_appcontext
-def close_db(exception):
-    db = g.pop("db", None)
-    if db:
-        db.close()
+def db():
+    return sqlite3.connect(DB_FILE)
 
 def init_db():
-    db = get_db()
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS watchlists (
+    con = db()
+    cur = con.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS watchlists(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
+            name TEXT UNIQUE
         )
     """)
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS watchlist_items (
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS stocks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             watchlist_id INTEGER,
-            symbol TEXT,
-            FOREIGN KEY (watchlist_id) REFERENCES watchlists(id)
+            trading_symbol TEXT,
+            exchange_token TEXT
         )
     """)
-    db.commit()
+    cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
+    con.commit()
+    con.close()
 
-with app.app_context():
-    init_db()
+init_db()
 
-# =========================================================
-# LOAD COMPANY MASTER (SAFE)
-# =========================================================
+def login():
+    totp = pyotp.TOTP(TOTP_SECRET).now()
+    r1 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
+        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
+    ).json()
 
-COMPANY_MAP = {}
+    r2 = requests.post(
+        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
+        headers={
+            "Authorization": ACCESS_TOKEN,
+            "neo-fin-key": "neotradeapi",
+            "sid": r1["data"]["sid"],
+            "Auth": r1["data"]["token"]
+        },
+        json={"mpin": MPIN}
+    ).json()
 
-def load_company_master():
-    global COMPANY_MAP
-    if not os.path.exists(COMPANY_MASTER):
-        print("⚠️ company_master.csv not found")
-        return
+    SESSION["base"] = r2["data"]["baseUrl"]
 
-    with open(COMPANY_MASTER, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            COMPANY_MAP[row["symbol"]] = row["company_name"]
+login()
 
-    print(f"✅ Loaded {len(COMPANY_MAP)} company names")
+with open(DATA_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
 
-load_company_master()
+def get_watchlists():
+    con = db()
+    rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
+    con.close()
+    return rows
 
-# =========================================================
-# ROUTES
-# =========================================================
+def format_volume(v):
+    v = float(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.2f}B"
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"{v/1_000:.2f}K"
+    return str(int(v))
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", watchlists=get_watchlists())
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").upper()
-    results = []
+    q = request.args.get("q", "").lower()
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
 
-    for symbol, name in COMPANY_MAP.items():
-        if q in symbol:
-            results.append({
-                "symbol": symbol,
-                "company_name": name
-            })
-        if len(results) >= 20:
-            break
-
-    return jsonify(results)
-
-@app.route("/watchlists")
-def get_watchlists():
-    db = get_db()
-    rows = db.execute("SELECT * FROM watchlists").fetchall()
-    return jsonify([dict(r) for r in rows])
-
-@app.route("/watchlists", methods=["POST"])
-def add_watchlist():
-    name = request.json.get("name", "Watchlist")
-    db = get_db()
-    db.execute("INSERT INTO watchlists (name) VALUES (?)", (name,))
-    db.commit()
-    return ("", 204)
+@app.route("/watchlist", methods=["POST"])
+def create_watchlist():
+    con = db()
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
+    con.commit()
+    con.close()
+    return "", 204
 
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
-    name = request.json.get("name")
-    db = get_db()
-    db.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
-    db.commit()
-    return ("", 204)
+    con = db()
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
+    con.commit()
+    con.close()
+    return "", 204
 
 @app.route("/add", methods=["POST"])
 def add_stock():
+    s = request.json
     wid = request.args.get("wid")
-    symbol = request.json.get("symbol")
+    con = db()
+    con.execute("""
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
+        VALUES (?, ?, ?)
+    """, (wid, s["trading_symbol"], s["exchange_token"]))
+    con.commit()
+    con.close()
+    return "", 204
 
-    db = get_db()
-    db.execute(
-        "INSERT INTO watchlist_items (watchlist_id, symbol) VALUES (?, ?)",
-        (wid, symbol)
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    con = db()
+    con.execute(
+        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
+        (request.args.get("wid"), request.json["trading_symbol"])
     )
-    db.commit()
-    return ("", 204)
+    con.commit()
+    con.close()
+    return "", 204
 
 @app.route("/prices")
 def prices():
     wid = request.args.get("wid")
-    db = get_db()
+    con = db()
+    stocks = con.execute(
+        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+        (wid,)
+    ).fetchall()
+    con.close()
 
-    rows = db.execute("""
-        SELECT symbol FROM watchlist_items WHERE watchlist_id=?
-    """, (wid,)).fetchall()
+    if not stocks:
+        return jsonify([])
 
-    data = []
-    for r in rows:
-        symbol = r["symbol"]
-        data.append({
-            "symbol": symbol,
-            "company_name": COMPANY_MAP.get(symbol, symbol),
-            "price": 0,
-            "change": 0
+    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
+    data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
+
+    out = []
+    for q, s in zip(data, stocks):
+        o = q.get("ohlc", {})
+        out.append({
+            "symbol": s[0],
+            "company_name": q.get("instrumentName", s[0].replace("-EQ", "")),
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
-
-    return jsonify(data)
-
-# =========================================================
-# ENTRY POINT
-# =========================================================
+    return jsonify(out)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
