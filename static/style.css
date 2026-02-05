@@ -1,158 +1,52 @@
-* {
-    box-sizing: border-box;
-    font-family: "Segoe UI", Roboto, Arial, sans-serif;
-}
-
 body {
-    margin: 0;
-    background: #f4f6f9;
-    color: #222;
+  font-family: Arial;
+  background:#0f172a;
+  color:#e5e7eb;
 }
 
-/* ---------- HEADER ---------- */
-.top-bar {
-    background: #0f172a;
-    color: white;
-    padding: 18px 32px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+header {
+  padding:15px;
 }
 
-.top-bar h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
+h1 {
+  margin:0 0 10px;
 }
 
-/* ---------- LAYOUT ---------- */
-.container {
-    padding: 24px 32px;
-}
-
-/* ---------- TABS ---------- */
-.tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 18px;
-}
-
-.tab {
-    background: #e5e7eb;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
-}
-
-.tab:hover {
-    background: #d1d5db;
-}
-
-.tab.active {
-    background: #0f172a;
-    color: white;
-}
-
-.tab.add {
-    font-weight: bold;
-}
-
-/* ---------- SEARCH ---------- */
-.search-box {
-    position: relative;
-    width: 320px;
-    margin-bottom: 16px;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 10px 12px;
-    font-size: 14px;
-    border-radius: 6px;
-    border: 1px solid #cbd5e1;
+input {
+  padding:8px;
+  width:300px;
 }
 
 #suggestions {
-    position: absolute;
-    top: 42px;
-    width: 100%;
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    z-index: 10;
+  background:#020617;
+  position:absolute;
+  width:300px;
 }
 
-.suggestion-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 14px;
+#suggestions div {
+  padding:6px;
+  cursor:pointer;
 }
 
-.suggestion-item:hover {
-    background: #f1f5f9;
-}
-
-/* ---------- TABLE ---------- */
-.table-wrapper {
-    overflow-x: auto;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+#suggestions div:hover {
+  background:#1e293b;
 }
 
 table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-thead {
-    background: #f8fafc;
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
 }
 
 th, td {
-    padding: 12px 10px;
-    text-align: center;
-    border-bottom: 1px solid #e5e7eb;
+  padding:8px;
+  border-bottom:1px solid #334155;
 }
 
-th {
-    font-weight: 600;
-    color: #334155;
-}
+.up { color:#22c55e; }
+.dn { color:#ef4444; }
 
-tbody tr {
-    transition: background 0.15s ease;
-    cursor: pointer;
-}
-
-tbody tr:hover {
-    background: #f1f5f9;
-}
-
-/* ---------- DELETE BUTTON ---------- */
-td button {
-    background: #ef4444;
-    border: none;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-td button:hover {
-    background: #dc2626;
-}
-
-/* ---------- RESPONSIVE ---------- */
-@media (max-width: 900px) {
-    .container {
-        padding: 16px;
-    }
-
-    .search-box {
-        width: 100%;
-    }
+tr:hover {
+  background:#1e293b;
+  cursor:pointer;
 }
