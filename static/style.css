@@ -1,74 +1,157 @@
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f4f6f9;
-}
-
-.top-bar {
-    background: #0b1c2d;
-    color: white;
-    padding: 15px 30px;
-}
-
-.tabs {
-    background: white;
-    padding: 10px 30px;
-}
-
-.tab {
-    padding: 6px 14px;
-    margin-right: 6px;
-    border-radius: 6px;
-    border: none;
-    background: #e9ecf1;
-    cursor: pointer;
-}
-
-.tab.active {
-    background: #0b1c2d;
-    color: white;
-}
-
-.tab.add {
-    font-weight: bold;
-}
-
-.search-box {
-    margin: 20px 30px;
-    position: relative;
-    width: 300px;
-}
-
-#search {
-    width: 100%;
-    padding: 10px;
-}
-
-#suggestions {
-    position: absolute;
-    background: white;
-    width: 100%;
-    border: 1px solid #ccc;
-    z-index: 10;
-}
-
-.suggestion-item {
-    padding: 8px;
-    cursor: pointer;
-}
-
-.suggestion-item:hover {
-    background: #eef2f7;
-}
-
-table {
-    margin: 0 30px 30px;
-    width: calc(100% - 60px);
-    background: white;
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 10px;
-    text-align: center;
-}
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/static/style.css b/static/style.css
+index e28b979f65e4833d90b63468ec23a31e941754e3..6832051cf45a64462f2cc9d736046ed453e988f2 100644
+--- a/static/style.css
++++ b/static/style.css
+@@ -1,37 +1,59 @@
+ body {
+     margin: 0;
+     font-family: Arial, sans-serif;
+     background: #f4f6f9;
+ }
+ 
+ .top-bar {
+     background: #0b1c2d;
+     color: white;
+     padding: 15px 30px;
+ }
+ 
++.top-bar__content {
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++    gap: 20px;
++}
++
++.top-bar__nav {
++    display: flex;
++    gap: 16px;
++}
++
++.top-bar__link {
++    color: #c9d4e3;
++    text-decoration: none;
++    font-size: 14px;
++}
++
++.top-bar__link:hover {
++    color: #ffffff;
++}
++
+ .tabs {
+     background: white;
+     padding: 10px 30px;
+ }
+ 
+ .tab {
+     padding: 6px 14px;
+     margin-right: 6px;
+     border-radius: 6px;
+     border: none;
+     background: #e9ecf1;
+     cursor: pointer;
+ }
+ 
+ .tab.active {
+     background: #0b1c2d;
+     color: white;
+ }
+ 
+ .tab.add {
+     font-weight: bold;
+ }
+ 
+ .search-box {
+     margin: 20px 30px;
+@@ -50,25 +72,88 @@ body {
+     width: 100%;
+     border: 1px solid #ccc;
+     z-index: 10;
+ }
+ 
+ .suggestion-item {
+     padding: 8px;
+     cursor: pointer;
+ }
+ 
+ .suggestion-item:hover {
+     background: #eef2f7;
+ }
+ 
+ table {
+     margin: 0 30px 30px;
+     width: calc(100% - 60px);
+     background: white;
+     border-collapse: collapse;
+ }
+ 
+ th, td {
+     padding: 10px;
+     text-align: center;
+ }
++
++.docs {
++    padding: 30px;
++    max-width: 1100px;
++    margin: 0 auto;
++}
++
++.doc-hero h2 {
++    margin-top: 0;
++}
++
++.doc-callout {
++    background: #e8f0ff;
++    border-left: 4px solid #2f5fb3;
++    padding: 12px 16px;
++    margin-top: 12px;
++}
++
++.doc-section {
++    margin-top: 32px;
++}
++
++.doc-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
++    gap: 16px;
++    margin-top: 12px;
++}
++
++.doc-card {
++    background: #ffffff;
++    border-radius: 8px;
++    padding: 16px;
++    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
++    margin-top: 16px;
++}
++
++.doc-table {
++    width: 100%;
++    border-collapse: collapse;
++    margin-top: 8px;
++}
++
++.doc-table th,
++.doc-table td {
++    border: 1px solid #e3e7ee;
++    padding: 8px;
++    text-align: left;
++}
++
++pre {
++    background: #0b1c2d;
++    color: #e8eefb;
++    padding: 16px;
++    border-radius: 8px;
++    overflow-x: auto;
++    margin-top: 12px;
++}
++
++code {
++    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
++    font-size: 12.5px;
++}
+ 
+EOF
+)
