@@ -50,7 +50,6 @@ init_db()
 # ---------- LOGIN ----------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
-
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -73,35 +72,39 @@ def login():
 login()
 
 # ---------- LOAD SCRIP MASTER ----------
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
-    SCRIPS = list(csv.DictReader(f))
+if os.path.exists(SCRIP_FILE):
+    with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+        SCRIPS = list(csv.DictReader(f))
 
-# ---------- MAP TOKEN BY SYMBOL ----------
 TOKEN_MAP = {
     r["trading_symbol"]: r["exchange_token"]
     for r in SCRIPS
 }
 
-# ---------- LOAD COMPANY NAMES ----------
-with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
-    for r in csv.DictReader(f):
-        sym = (r.get("SYMBOL") or "").strip().upper()
-        name = (r.get("NAME") or "").strip()
-        if sym and name:
-            COMPANY_MAP[sym] = name
+# ---------- LOAD COMPANY NAMES (SAFE) ----------
+if os.path.exists(EQUITY_FILE):
+    with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            sym = (r.get("SYMBOL") or "").strip().upper()
+            name = (r.get("NAME") or "").strip()
+            if sym and name:
+                COMPANY_MAP[sym] = name
+else:
+    print("⚠️ WARNING: EQUITY_L.csv not found. Company names will fallback to symbol.")
 
-# ---------- LOAD SEARCH DATA (MCAP FILE) ----------
-with open(MCAP_FILE, newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    for r in reader:
-        sym = (r.get("SYMBOL") or r.get("Symbol") or "").strip().upper()
-        name = (r.get("COMPANY NAME") or r.get("Company") or r.get("NAME") or "").strip()
-        if sym and name:
-            SEARCH_LIST.append({
-                "symbol": f"{sym}-EQ",
-                "company": name,
-                "exchange_token": TOKEN_MAP.get(f"{sym}-EQ")
-            })
+# ---------- LOAD SEARCH DATA ----------
+if os.path.exists(MCAP_FILE):
+    with open(MCAP_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            sym = (r.get("SYMBOL") or r.get("Symbol") or "").strip().upper()
+            name = (r.get("COMPANY NAME") or r.get("Company") or r.get("NAME") or "").strip()
+            token = TOKEN_MAP.get(f"{sym}-EQ")
+            if sym and name and token:
+                SEARCH_LIST.append({
+                    "symbol": f"{sym}-EQ",
+                    "company": name,
+                    "exchange_token": token
+                })
 
 # ---------- HELPERS ----------
 def get_watchlists():
@@ -121,7 +124,8 @@ def format_volume(v):
     return str(int(v))
 
 def get_company_name(sym):
-    return COMPANY_MAP.get(sym.replace("-EQ",""), sym.replace("-EQ",""))
+    base = sym.replace("-EQ", "")
+    return COMPANY_MAP.get(base, base)
 
 # ---------- ROUTES ----------
 @app.route("/")
@@ -130,30 +134,18 @@ def index():
 
 @app.route("/search")
 def search():
-    q = request.args.get("q","").lower()
-    if not q:
-        return jsonify([])
-
-    results = [
-        s for s in SEARCH_LIST
-        if q in s["symbol"].lower() or q in s["company"].lower()
-    ][:10]
-
-    return jsonify(results)
+    q = request.args.get("q", "").lower()
+    return jsonify([s for s in SEARCH_LIST if q in s["symbol"].lower() or q in s["company"].lower()][:10])
 
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
-
-    if not s.get("exchange_token"):
-        return "", 400
-
     con = db()
-    con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
-        VALUES (?, ?, ?)
-    """, (wid, s["symbol"], s["exchange_token"]))
+    con.execute(
+        "INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token) VALUES (?, ?, ?)",
+        (wid, s["symbol"], s["exchange_token"])
+    )
     con.commit()
     con.close()
     return "", 204
@@ -181,13 +173,13 @@ def prices():
         out.append({
             "symbol": s[0],
             "company_name": get_company_name(s[0]),
-            "ltp": float(q.get("ltp",0)),
-            "pct": float(q.get("per_change",0)),
-            "volume": format_volume(q.get("last_volume",0)),
-            "open": o.get("open",0),
-            "high": o.get("high",0),
-            "low": o.get("low",0),
-            "close": o.get("close",0)
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
+            "volume": format_volume(q.get("last_volume", 0)),
+            "open": o.get("open", 0),
+            "high": o.get("high", 0),
+            "low": o.get("low", 0),
+            "close": o.get("close", 0)
         })
 
     return jsonify(out)
