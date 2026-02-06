@@ -13,12 +13,10 @@ TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 DB_FILE = "watchlists.db"
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
 EQUITY_FILE = "data/EQUITY_L.csv"
-MCAP_FILE = "data/mcap05022026.csv"
 
 SESSION = {}
 SCRIPS = []
 COMPANY_MAP = {}
-SEARCH_LIST = []
 
 # ---------- DB ----------
 def db():
@@ -50,6 +48,7 @@ init_db()
 # ---------- LOGIN ----------
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
+
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -72,39 +71,17 @@ def login():
 login()
 
 # ---------- LOAD SCRIP MASTER ----------
-if os.path.exists(SCRIP_FILE):
-    with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
-        SCRIPS = list(csv.DictReader(f))
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+    SCRIPS = list(csv.DictReader(f))
 
-TOKEN_MAP = {
-    r["trading_symbol"]: r["exchange_token"]
-    for r in SCRIPS
-}
-
-# ---------- LOAD COMPANY NAMES (SAFE) ----------
-if os.path.exists(EQUITY_FILE):
-    with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            sym = (r.get("SYMBOL") or "").strip().upper()
-            name = (r.get("NAME") or "").strip()
-            if sym and name:
-                COMPANY_MAP[sym] = name
-else:
-    print("⚠️ WARNING: EQUITY_L.csv not found. Company names will fallback to symbol.")
-
-# ---------- LOAD SEARCH DATA ----------
-if os.path.exists(MCAP_FILE):
-    with open(MCAP_FILE, newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            sym = (r.get("SYMBOL") or r.get("Symbol") or "").strip().upper()
-            name = (r.get("COMPANY NAME") or r.get("Company") or r.get("NAME") or "").strip()
-            token = TOKEN_MAP.get(f"{sym}-EQ")
-            if sym and name and token:
-                SEARCH_LIST.append({
-                    "symbol": f"{sym}-EQ",
-                    "company": name,
-                    "exchange_token": token
-                })
+# ---------- LOAD EQUITY_L COMPANY NAMES ----------
+with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for r in reader:
+        sym = r.get("SYMBOL") or r.get("Symbol")
+        name = r.get("NAME") or r.get("Name")
+        if sym and name:
+            COMPANY_MAP[sym.strip().upper()] = name.strip()
 
 # ---------- HELPERS ----------
 def get_watchlists():
@@ -123,8 +100,8 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
-def get_company_name(sym):
-    base = sym.replace("-EQ", "")
+def get_company_name(trading_symbol):
+    base = trading_symbol.replace("-EQ", "").upper()
     return COMPANY_MAP.get(base, base)
 
 # ---------- ROUTES ----------
@@ -135,16 +112,43 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([s for s in SEARCH_LIST if q in s["symbol"].lower() or q in s["company"].lower()][:10])
+    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+
+@app.route("/watchlist", methods=["POST"])
+def create_watchlist():
+    con = db()
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/watchlist/<int:wid>", methods=["PUT"])
+def rename_watchlist(wid):
+    con = db()
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
+    con.commit()
+    con.close()
+    return "", 204
 
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
     con = db()
+    con.execute("""
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
+        VALUES (?, ?, ?)
+    """, (wid, s["trading_symbol"], s["exchange_token"]))
+    con.commit()
+    con.close()
+    return "", 204
+
+@app.route("/remove", methods=["POST"])
+def remove_stock():
+    con = db()
     con.execute(
-        "INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token) VALUES (?, ?, ?)",
-        (wid, s["symbol"], s["exchange_token"])
+        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
+        (request.args.get("wid"), request.json["trading_symbol"])
     )
     con.commit()
     con.close()
