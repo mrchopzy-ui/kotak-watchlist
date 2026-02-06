@@ -13,10 +13,12 @@ TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 DB_FILE = "watchlists.db"
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
 EQUITY_FILE = "data/EQUITY_L.csv"
+MCAP_FILE = "data/mcap05022026.csv"
 
 SESSION = {}
 SCRIPS = []
 COMPANY_MAP = {}
+SEARCH_LIST = []
 
 # ---------- DB ----------
 def db():
@@ -74,14 +76,32 @@ login()
 with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
-# ---------- LOAD EQUITY_L COMPANY NAMES ----------
+# ---------- MAP TOKEN BY SYMBOL ----------
+TOKEN_MAP = {
+    r["trading_symbol"]: r["exchange_token"]
+    for r in SCRIPS
+}
+
+# ---------- LOAD COMPANY NAMES ----------
 with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
+    for r in csv.DictReader(f):
+        sym = (r.get("SYMBOL") or "").strip().upper()
+        name = (r.get("NAME") or "").strip()
+        if sym and name:
+            COMPANY_MAP[sym] = name
+
+# ---------- LOAD SEARCH DATA (MCAP FILE) ----------
+with open(MCAP_FILE, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for r in reader:
-        sym = r.get("SYMBOL") or r.get("Symbol")
-        name = r.get("NAME") or r.get("Name")
+        sym = (r.get("SYMBOL") or r.get("Symbol") or "").strip().upper()
+        name = (r.get("COMPANY NAME") or r.get("Company") or r.get("NAME") or "").strip()
         if sym and name:
-            COMPANY_MAP[sym.strip().upper()] = name.strip()
+            SEARCH_LIST.append({
+                "symbol": f"{sym}-EQ",
+                "company": name,
+                "exchange_token": TOKEN_MAP.get(f"{sym}-EQ")
+            })
 
 # ---------- HELPERS ----------
 def get_watchlists():
@@ -100,9 +120,8 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
-def get_company_name(trading_symbol):
-    base = trading_symbol.replace("-EQ", "").upper()
-    return COMPANY_MAP.get(base, base)
+def get_company_name(sym):
+    return COMPANY_MAP.get(sym.replace("-EQ",""), sym.replace("-EQ",""))
 
 # ---------- ROUTES ----------
 @app.route("/")
@@ -111,45 +130,30 @@ def index():
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+    q = request.args.get("q","").lower()
+    if not q:
+        return jsonify([])
 
-@app.route("/watchlist", methods=["POST"])
-def create_watchlist():
-    con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
-    con.commit()
-    con.close()
-    return "", 204
+    results = [
+        s for s in SEARCH_LIST
+        if q in s["symbol"].lower() or q in s["company"].lower()
+    ][:10]
 
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename_watchlist(wid):
-    con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
-    con.commit()
-    con.close()
-    return "", 204
+    return jsonify(results)
 
 @app.route("/add", methods=["POST"])
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
+
+    if not s.get("exchange_token"):
+        return "", 400
+
     con = db()
     con.execute("""
         INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
         VALUES (?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"]))
-    con.commit()
-    con.close()
-    return "", 204
-
-@app.route("/remove", methods=["POST"])
-def remove_stock():
-    con = db()
-    con.execute(
-        "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (request.args.get("wid"), request.json["trading_symbol"])
-    )
+    """, (wid, s["symbol"], s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
@@ -177,13 +181,13 @@ def prices():
         out.append({
             "symbol": s[0],
             "company_name": get_company_name(s[0]),
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": format_volume(q.get("last_volume", 0)),
-            "open": o.get("open", 0),
-            "high": o.get("high", 0),
-            "low": o.get("low", 0),
-            "close": o.get("close", 0)
+            "ltp": float(q.get("ltp",0)),
+            "pct": float(q.get("per_change",0)),
+            "volume": format_volume(q.get("last_volume",0)),
+            "open": o.get("open",0),
+            "high": o.get("high",0),
+            "low": o.get("low",0),
+            "close": o.get("close",0)
         })
 
     return jsonify(out)
