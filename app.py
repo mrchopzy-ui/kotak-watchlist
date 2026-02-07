@@ -12,7 +12,7 @@ TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 DB_FILE = "watchlists.db"
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-MCAP_FILE = "data/BhavCopy_NSE_CM_0_0_0_20260206_F_0000.csv"
+MCAP_FILE = "data/mcap05022026.csv"
 
 SESSION = {}
 SCRIPS = []
@@ -80,7 +80,7 @@ with open(MCAP_FILE, newline="", encoding="utf-8") as f:
     for r in reader:
         if r.get("Series") == "EQ":
             sym = r.get("Symbol", "").strip().upper()
-            name = r.get("FinInstrmNm", "").strip()
+            name = r.get("Security Name", "").strip()
             if sym and name:
                 COMPANY_MAP[sym] = name
 
