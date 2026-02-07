@@ -70,8 +70,8 @@ def login():
 
 login()
 
-# ---------- LOAD SCRIP MASTER ----------
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+# ---------- LOAD SCRIP MASTER (FIXED ENCODING) ----------
+with open(SCRIP_FILE, newline="", encoding="latin-1") as f:
     SCRIPS = list(csv.DictReader(f))
 
 # ---------- LOAD EQUITY_L COMPANY NAMES ----------
