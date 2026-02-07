@@ -5,11 +5,12 @@ const addBtn = document.getElementById("addWatchlist");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let timer = null;
-let lastPrices = {}; // 🔑 stores previous prices
+let lastPrices = {};
 
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
+
     await fetch("/watchlist", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -30,6 +31,7 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.ondblclick = async () => {
         const name = prompt("Rename watchlist:", tab.innerText);
         if (!name) return;
+
         await fetch(`/watchlist/${tab.dataset.id}`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
@@ -70,7 +72,6 @@ async function load() {
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const tv = s.symbol.replace("-EQ", "");
         const prev = lastPrices[s.symbol];
         let cls = "";
 
@@ -78,8 +79,9 @@ async function load() {
             if (s.ltp > prev) cls = "blink-up";
             else if (s.ltp < prev) cls = "blink-down";
         }
-
         lastPrices[s.symbol] = s.ltp;
+
+        const tv = s.symbol.replace("-EQ", "");
 
         tbody.innerHTML += `
         <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${tv}','_blank')">
@@ -88,10 +90,10 @@ async function load() {
             <td class="${cls}">${s.ltp.toFixed(2)}</td>
             <td class="${cls}">${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
-            <td>${s.open}</td>
-            <td>${s.high}</td>
-            <td>${s.low}</td>
-            <td>${s.close}</td>
+            <td>${Number(s.open).toFixed(2)}</td>
+            <td>${Number(s.high).toFixed(2)}</td>
+            <td>${Number(s.low).toFixed(2)}</td>
+            <td>${Number(s.close).toFixed(2)}</td>
             <td>
                 <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
             </td>
