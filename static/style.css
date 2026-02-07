@@ -1,105 +1,116 @@
 body {
     font-family: "Segoe UI", system-ui, sans-serif;
-    background: #f6f8fb;
+    background: #ffffff;
     margin: 0;
     color: #1f2937;
 }
 
+/* ================= HEADER ================= */
 .top-bar {
     background: #ffffff;
-    padding: 16px 24px;
+    padding: 28px 24px 18px;
     border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
 }
 
-.top-bar h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
+.logo {
+    height: 88px;
+    object-fit: contain;
 }
 
+/* ================= TABS ================= */
 .tabs {
     display: flex;
-    gap: 6px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 14px 20px;
     background: #ffffff;
     border-bottom: 1px solid #e5e7eb;
 }
 
 .tab {
-    padding: 6px 14px;
-    border-radius: 6px;
+    padding: 7px 16px;
+    border-radius: 8px;
     border: 1px solid #e5e7eb;
-    background: #f9fafb;
+    background: #fafafa;
     cursor: pointer;
     font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.tab:hover {
+    border-color: #f59e0b;
 }
 
 .tab.active {
-    background: #2563eb;
+    background: linear-gradient(90deg, #fbbf24, #ec4899);
     color: #ffffff;
-    border-color: #2563eb;
+    border: none;
 }
 
 .tab.add {
-    font-weight: bold;
+    font-weight: 600;
 }
 
+/* ================= SEARCH ================= */
 .search-box {
     position: relative;
-    padding: 16px;
+    padding: 18px 20px;
     background: #ffffff;
 }
 
 .search-box input {
-    width: 320px;
-    padding: 10px;
+    width: 340px;
+    padding: 10px 12px;
     font-size: 14px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #d1d5db;
 }
 
 #suggestions {
     position: absolute;
-    background: white;
-    width: 320px;
+    background: #ffffff;
+    width: 340px;
     border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    margin-top: 4px;
-    z-index: 10;
+    border-radius: 8px;
+    margin-top: 6px;
+    z-index: 20;
 }
 
 .suggestion-item {
-    padding: 8px 10px;
+    padding: 9px 12px;
     cursor: pointer;
 }
 
 .suggestion-item:hover {
-    background: #f3f4f6;
+    background: #fef3c7;
 }
 
+/* ================= TABLE ================= */
 table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
+    background: #ffffff;
 }
 
 th, td {
-    padding: 10px;
+    padding: 11px;
     text-align: center;
     border-bottom: 1px solid #e5e7eb;
     font-size: 14px;
 }
 
 th {
-    background: #f9fafb;
+    background: #fafafa;
     font-weight: 600;
+    color: #374151;
 }
 
 tr:hover {
-    background: #f3f4f6;
+    background: #fffbeb;
 }
 
-/* 🔴🟢 PRICE BLINK */
+/* ================= PRICE BLINK ================= */
 .blink-up {
     animation: upFlash 0.6s ease;
     color: #15803d;
@@ -120,6 +131,7 @@ tr:hover {
     100% { background: transparent; }
 }
 
+/* ================= BUTTONS ================= */
 button {
     background: none;
     border: none;
@@ -129,5 +141,5 @@ button {
 }
 
 button:hover {
-    color: #ef4444;
+    color: #dc2626;
 }
