@@ -3,17 +3,28 @@ const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
 
+const soundUp = document.getElementById("sound-up");
+const soundDown = document.getElementById("sound-down");
+
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let timer = null;
+
+let lastPrices = {};
+let lastSoundTime = {};
+
+const BIG_MOVE_PCT = 0.30;     // 🔔 threshold
+const SOUND_COOLDOWN = 10000;  // 10 sec per stock
 
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
+
     await fetch("/watchlist", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({name})
     });
+
     location.reload();
 };
 
@@ -22,17 +33,21 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
+        lastPrices = {};
+        lastSoundTime = {};
         start();
     };
 
     tab.ondblclick = async () => {
         const name = prompt("Rename watchlist:", tab.innerText);
         if (!name) return;
+
         await fetch(`/watchlist/${tab.dataset.id}`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({name})
         });
+
         location.reload();
     };
 });
@@ -67,10 +82,36 @@ async function load() {
     const data = await res.json();
     tbody.innerHTML = "";
 
+    const now = Date.now();
+
     data.forEach(s => {
+        const prev = lastPrices[s.symbol];
+        let cls = "";
+
+        if (prev !== undefined) {
+            const movePct = Math.abs((s.ltp - prev) / prev * 100);
+            const lastPlayed = lastSoundTime[s.symbol] || 0;
+
+            if (movePct >= BIG_MOVE_PCT && now - lastPlayed > SOUND_COOLDOWN) {
+                if (s.ltp > prev) {
+                    soundUp.currentTime = 0;
+                    soundUp.play();
+                } else {
+                    soundDown.currentTime = 0;
+                    soundDown.play();
+                }
+                lastSoundTime[s.symbol] = now;
+            }
+
+            if (s.ltp > prev) cls = "price-up";
+            else if (s.ltp < prev) cls = "price-down";
+        }
+
+        lastPrices[s.symbol] = s.ltp;
         const tv = s.symbol.replace("-EQ", "");
+
         tbody.innerHTML += `
-        <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${tv}','_blank')">
+        <tr class="${cls}" onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${tv}','_blank')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -81,18 +122,20 @@ async function load() {
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="event.stopPropagation(); remove('${s.symbol}')">✕</button>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
             </td>
         </tr>`;
     });
 }
 
-async function remove(sym) {
+async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
+    delete lastPrices[sym];
+    delete lastSoundTime[sym];
     load();
 }
 
