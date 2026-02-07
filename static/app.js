@@ -3,17 +3,9 @@ const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
 
-const soundUp = document.getElementById("sound-up");
-const soundDown = document.getElementById("sound-down");
-
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let timer = null;
-
-let lastPrices = {};
-let lastSoundTime = {};
-
-const BIG_MOVE_PCT = 0.30;     // 🔔 threshold
-const SOUND_COOLDOWN = 10000;  // 10 sec per stock
+let lastPrices = {}; // 🔑 store previous prices
 
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
@@ -34,7 +26,6 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
         lastPrices = {};
-        lastSoundTime = {};
         start();
     };
 
@@ -82,27 +73,11 @@ async function load() {
     const data = await res.json();
     tbody.innerHTML = "";
 
-    const now = Date.now();
-
     data.forEach(s => {
         const prev = lastPrices[s.symbol];
         let cls = "";
 
         if (prev !== undefined) {
-            const movePct = Math.abs((s.ltp - prev) / prev * 100);
-            const lastPlayed = lastSoundTime[s.symbol] || 0;
-
-            if (movePct >= BIG_MOVE_PCT && now - lastPlayed > SOUND_COOLDOWN) {
-                if (s.ltp > prev) {
-                    soundUp.currentTime = 0;
-                    soundUp.play();
-                } else {
-                    soundDown.currentTime = 0;
-                    soundDown.play();
-                }
-                lastSoundTime[s.symbol] = now;
-            }
-
             if (s.ltp > prev) cls = "price-up";
             else if (s.ltp < prev) cls = "price-down";
         }
@@ -135,7 +110,6 @@ async function removeStock(sym) {
         body: JSON.stringify({trading_symbol: sym})
     });
     delete lastPrices[sym];
-    delete lastSoundTime[sym];
     load();
 }
 
