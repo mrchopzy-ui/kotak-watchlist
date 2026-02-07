@@ -7,7 +7,7 @@
 <body>
 
 <header class="top-bar">
-    <h1>Nexus Asset Management</h1>
+    <img src="/static/logo.png" class="logo">
 </header>
 
 <div class="tabs">
@@ -18,10 +18,11 @@
 </div>
 
 <div class="search-box">
-    <input id="search" placeholder="Type stock symbol">
+    <input id="search" placeholder="Type stock symbol (eg. ITC)">
     <div id="suggestions"></div>
 </div>
 
+<div class="table-wrapper">
 <table>
     <thead>
         <tr>
@@ -39,6 +40,7 @@
     </thead>
     <tbody id="watchlist"></tbody>
 </table>
+</div>
 
 <script src="/static/app.js"></script>
 </body>
