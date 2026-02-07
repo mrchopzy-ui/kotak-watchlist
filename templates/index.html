@@ -1,156 +1,51 @@
-body {
-    font-family: "Segoe UI", system-ui, sans-serif;
-    background: #f6f8fb;
-    margin: 0;
-    color: #1f2937;
-}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
-/* ===== HEADER ===== */
-.top-bar {
-    background: #ffffff;
-    padding: 14px 24px;
-    border-bottom: 1px solid #e5e7eb;
-}
+<header class="top-bar">
+    <div class="brand">
+        <img src="/static/logo.png" alt="Nexus Asset Management Logo">
+        <div class="brand-text">
+            <h1>NEXUS</h1>
+            <span>ASSET MANAGEMENT</span>
+        </div>
+    </div>
+</header>
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
+<div class="tabs">
+    {% for w in watchlists %}
+        <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
+    {% endfor %}
+    <button class="tab add" id="addWatchlist">+</button>
+</div>
 
-.brand img {
-    height: 42px;
-    width: auto;
-}
+<div class="search-box">
+    <input id="search" placeholder="Type stock symbol">
+    <div id="suggestions"></div>
+</div>
 
-.brand-text h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
+<table>
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Company Name</th>
+            <th>LTP</th>
+            <th>%</th>
+            <th>Volume</th>
+            <th>Open</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Close</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody id="watchlist"></tbody>
+</table>
 
-.brand-text span {
-    font-size: 11px;
-    letter-spacing: 1.2px;
-    color: #6b7280;
-}
-
-/* ===== TABS ===== */
-.tabs {
-    display: flex;
-    gap: 6px;
-    padding: 12px 16px;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.tab {
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.tab.active {
-    background: #2563eb;
-    color: #ffffff;
-    border-color: #2563eb;
-}
-
-.tab.add {
-    font-weight: bold;
-}
-
-/* ===== SEARCH ===== */
-.search-box {
-    position: relative;
-    padding: 16px;
-    background: #ffffff;
-}
-
-.search-box input {
-    width: 320px;
-    padding: 10px;
-    font-size: 14px;
-    border-radius: 6px;
-    border: 1px solid #d1d5db;
-}
-
-#suggestions {
-    position: absolute;
-    background: white;
-    width: 320px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    margin-top: 4px;
-    z-index: 10;
-}
-
-.suggestion-item {
-    padding: 8px 10px;
-    cursor: pointer;
-}
-
-.suggestion-item:hover {
-    background: #f3f4f6;
-}
-
-/* ===== TABLE ===== */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-
-th, td {
-    padding: 10px;
-    text-align: center;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 14px;
-}
-
-th {
-    background: #f9fafb;
-    font-weight: 600;
-}
-
-tr:hover {
-    background: #f3f4f6;
-}
-
-/* ===== PRICE BLINK ===== */
-.blink-up {
-    animation: upFlash 0.6s ease;
-    color: #15803d;
-}
-
-.blink-down {
-    animation: downFlash 0.6s ease;
-    color: #b91c1c;
-}
-
-@keyframes upFlash {
-    0% { background: #dcfce7; }
-    100% { background: transparent; }
-}
-
-@keyframes downFlash {
-    0% { background: #fee2e2; }
-    100% { background: transparent; }
-}
-
-/* ===== BUTTON ===== */
-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    color: #9ca3af;
-}
-
-button:hover {
-    color: #ef4444;
-}
+<script src="/static/app.js"></script>
+</body>
+</html>
