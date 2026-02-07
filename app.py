@@ -80,7 +80,7 @@ with open(MCAP_FILE, newline="", encoding="utf-8") as f:
     for r in reader:
         if r.get("Series") == "EQ":
             sym = r.get("Symbol", "").strip().upper()
-            name = r.get("Security Name", "").strip()
+            name = r.get("FinInstrmNm", "").strip()
             if sym and name:
                 COMPANY_MAP[sym] = name
 
