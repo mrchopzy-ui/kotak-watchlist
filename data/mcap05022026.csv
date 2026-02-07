@@ -245,7 +245,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,ASTERDM,EQ,ASTER DM HEALTHCARE LTD. ,Listed    ,05 FEB 2026,              10.00,         518121029,            537.95,   278723207550.55   
 05 FEB 2026,ASTRAL,EQ,ASTRAL LIMITED           ,Listed    ,05 FEB 2026,               1.00,         268650163,           1503.60,   403942385086.80    
 05 FEB 2026,ASTRAMICRO,EQ,ASTRA MICROWAVE LTD      ,Listed    ,05 FEB 2026,               2.00,          94945008,            935.95,    88863780237.60
-05 FEB 2026,ASTRAZEN,EQ,ASTRAZENECA PHARMA IND LT,Listed    ,05 FEB 2026,               2.00,          25000000,           8621.50,   215537500000.00  
+05 FEB 2026,ASTRAZEN,EQ,ASTRAZENECA PHARMA IND LTD,Listed    ,05 FEB 2026,               2.00,          25000000,           8621.50,   215537500000.00  
 05 FEB 2026,ASTRON,EQ,ASTRON PAPER BORD MIL LTD,Listed    ,05 FEB 2026,              10.00,          46500000,              4.15,      192045000.00    
 05 FEB 2026,ATALREAL,EQ,ATAL REALTECH LIMITED    ,Listed    ,05 FEB 2026,               2.00,         111015000,             27.60,     3066234300.00  
 05 FEB 2026,ATAM,EQ,ATAM VALVES LIMITED      ,Listed    ,05 FEB 2026,              10.00,          11463000,             74.90,      858464070.00      
@@ -302,7 +302,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,BAJAJFINSV,EQ,BAJAJ FINSERV LTD.       ,Listed    ,05 FEB 2026,               1.00,        1597813220,           2000.10,  3195786221322.00
 05 FEB 2026,BAJAJHCARE,EQ,BAJAJ HEALTHCARE LIMITED ,Listed    ,05 FEB 2026,               5.00,          31583252,            368.65,    11643165849.80
 05 FEB 2026,BAJAJHFL,EQ,BAJAJ HOUSING FINANCE LTD,Listed    ,05 FEB 2026,              10.00,        8332334619,             91.30,   760825474060.90  
-05 FEB 2026,BAJAJHIND,EQ,BAJAJ HINDUSTHAN SUGAR LT,Listed    ,05 FEB 2026,               1.00,        1277359942,             16.35,    20872061452.30 
+05 FEB 2026,BAJAJHIND,EQ,BAJAJ HINDUSTHAN SUGAR LTD,Listed    ,05 FEB 2026,               1.00,        1277359942,             16.35,    20872061452.30 
 05 FEB 2026,BAJAJHLDNG,EQ,BAJAJ HOLDINGS & INVS LTD,Listed    ,05 FEB 2026,              10.00,         111293510,          10891.00,  1212097617410.00
 05 FEB 2026,BAJAJINDEF,EQ,INDEF MANUFACTURING LTD  ,Listed    ,05 FEB 2026,               1.00,          32000000,            298.00,     9536000000.00
 05 FEB 2026,BAJEL,EQ,BAJEL PROJECTS LIMITED   ,Listed    ,05 FEB 2026,               2.00,         115658560,            170.35,    19702435696.00     
@@ -353,7 +353,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,BELLACASA,EQ,BELLA CASA FASH AND RET L,Listed    ,05 FEB 2026,              10.00,          13387500,            316.40,     4235805000.00 
 05 FEB 2026,BELRISE,EQ,BELRISE INDUSTRIES LTD   ,Listed    ,05 FEB 2026,               5.00,         889879192,            184.55,   164218306091.70   
 05 FEB 2026,BEML,EQ,BEML LIMITED             ,Listed    ,05 FEB 2026,               5.00,          83289000,           1746.20,   145439251800.00      
-05 FEB 2026,BEPL,EQ,BHANSALI ENG. POLYMERS LT,Listed    ,05 FEB 2026,               1.00,         248858460,             86.45,    21518791036.20      
+05 FEB 2026,BEPL,EQ,BHANSALI ENG. POLYMERS LTD,Listed    ,05 FEB 2026,               1.00,         248858460,             86.45,    21518791036.20      
 05 FEB 2026,BERGEPAINT,EQ,BERGER PAINTS (I) LTD    ,Listed    ,05 FEB 2026,               1.00,        1165927190,            472.30,   550667411837.00
 05 FEB 2026,BESTAGRO,BE,BEST AGROLIFE LIMITED    ,Listed    ,05 FEB 2026,               1.00,         354671100,             19.95,     7068595023.00  
 05 FEB 2026,BETA,EQ,BETA DRUGS LIMITED       ,Listed    ,05 FEB 2026,              10.00,          10094553,           1459.30,    14730981192.90      
@@ -416,7 +416,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,BOSCH-HCIL,EQ,BOSCH HOME COMFRT IND LTD,Listed    ,05 FEB 2026,              10.00,          27190884,           1323.80,    35995292239.20
 05 FEB 2026,BOSCHLTD,EQ,BOSCH LIMITED            ,Listed    ,05 FEB 2026,              10.00,          29493640,          36275.00,  1069881791000.00  
 05 FEB 2026,BOSS,SM,BOSS PACKAGING SOLU LTD  ,Listed    ,01 FEB 2026,              10.00,           4446260,             36.20,      160954612.00      
-05 FEB 2026,BPCL,EQ,BHARAT PETROLEUM CORP  LT,Listed    ,05 FEB 2026,              10.00,        4338505488,            382.05,  1657526021690.40      
+05 FEB 2026,BPCL,EQ,BHARAT PETROLEUM CORP  LTD,Listed    ,05 FEB 2026,              10.00,        4338505488,            382.05,  1657526021690.40      
 05 FEB 2026,BPL,EQ,BPL LTD                  ,Listed    ,05 FEB 2026,              10.00,          48975751,             58.00,     2841083315.50       
 05 FEB 2026,BRACEPORT,SM,BRACE PORT LOGISTICS LTD ,Listed    ,05 FEB 2026,              10.00,          11301200,             81.55,      921612860.00 
 05 FEB 2026,BRIGADE,EQ,BRIGADE ENTER. LTD       ,Listed    ,05 FEB 2026,              10.00,         244498273,            771.45,   188618192705.85   
@@ -436,7 +436,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,BYKE,EQ,THE BYKE HOSPITALITY LTD ,Listed    ,05 FEB 2026,              10.00,          52279300,             52.10,     2724797116.00      
 05 FEB 2026,C2C,SM,C2C ADVANCED SYSTEMS LTD ,Listed    ,05 FEB 2026,              10.00,          16968433,            375.65,     6374191856.45       
 05 FEB 2026,CADSYS,SM,CADSYS (INDIA) LIMITED   ,Listed    ,05 FEB 2026,              10.00,          10002500,             48.70,      487121750.00    
-05 FEB 2026,CALSOFT,EQ,CALIFORNIA SOFTWARE CO LT,Listed    ,05 FEB 2026,              10.00,          15457106,             14.35,      221500329.00   
+05 FEB 2026,CALSOFT,EQ,CALIFORNIA SOFTWARE CO LTD,Listed    ,05 FEB 2026,              10.00,          15457106,             14.35,      221500329.00   
 05 FEB 2026,CAMLINFINE,EQ,CAMLIN FINE SCIENCES LTD ,Listed    ,05 FEB 2026,               1.00,         192086613,            171.75,    32988954916.60
 05 FEB 2026,CAMPUS,EQ,CAMPUS ACTIVEWEAR LIMITED,Listed    ,05 FEB 2026,               5.00,         305530332,            269.05,    82202935824.60    
 05 FEB 2026,CAMS,EQ,COMPUTER AGE MNGT SER LTD,Listed    ,05 FEB 2026,               2.00,         247650635,            731.40,   181131674439.00      
@@ -494,7 +494,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,CHEMCON,EQ,CHEMCON SPECIAL CHEM LTD ,Listed    ,05 FEB 2026,              10.00,          36630701,            183.70,     6728327159.70   
 05 FEB 2026,CHEMFAB,EQ,CHEMFAB ALKALIS LIMITED  ,Listed    ,05 FEB 2026,              10.00,          14373702,            404.45,     5813443773.90   
 05 FEB 2026,CHEMPLASTS,EQ,CHEMPLAST SANMAR LIMITED ,Listed    ,05 FEB 2026,               5.00,         158109574,            261.25,    41306126207.50
-05 FEB 2026,CHENNPETRO,EQ,CHENNAI PETROLEUM CORP LT,Listed    ,05 FEB 2026,              10.00,         148911400,            894.40,   133186356160.00
+05 FEB 2026,CHENNPETRO,EQ,CHENNAI PETROLEUM CORP LTD,Listed    ,05 FEB 2026,              10.00,         148911400,            894.40,   133186356160.00
 05 FEB 2026,CHETANA,SM,CHETANA EDUCATION LIMITED,Listed    ,05 FEB 2026,              10.00,          20400000,             46.00,      938400000.00   
 05 FEB 2026,CHEVIOT,EQ,CHEVIOT COMPANY LIMITED  ,Listed    ,05 FEB 2026,              10.00,           5841875,           1031.80,     6027646625.00   
 05 FEB 2026,CHOICEIN,EQ,CHOICE INTERNATIONAL LTD ,Listed    ,05 FEB 2026,              10.00,         205655500,            775.85,   159557819675.00  
@@ -535,7 +535,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,CONTI,SM,CONTINENTAL SEED CHEM LTD,Listed    ,02 FEB 2026,              10.00,          13702438,             20.90,      286380954.20     
 05 FEB 2026,CONTROLPR,EQ,CONTROL PRINT LIMITED    ,Listed    ,05 FEB 2026,              10.00,          15994212,            651.15,    10414631143.80 
 05 FEB 2026,COOLCAPS,SM,COOL CAPS INDUSTRIES LTD ,Listed    ,05 FEB 2026,               2.00,         115600000,             31.60,     3652960000.00  
-05 FEB 2026,CORALFINAC,EQ,CORAL INDIA FIN & HOUS LT,Listed    ,05 FEB 2026,               2.00,          40302225,             34.45,     1388008629.00
+05 FEB 2026,CORALFINAC,EQ,CORAL INDIA FIN & HOUS LTD,Listed    ,05 FEB 2026,               2.00,          40302225,             34.45,     1388008629.00
 05 FEB 2026,CORDSCABLE,EQ,CORDS CABLE INDUS LTD.   ,Listed    ,05 FEB 2026,              10.00,          12927780,            171.05,     2211555324.60
 05 FEB 2026,COROMANDEL,EQ,COROMANDEL INTERNTL. LTD ,Listed    ,05 FEB 2026,               1.00,         294995409,           2249.30,   663533173463.70
 05 FEB 2026,CORONA,EQ,CORONA REMEDIES LIMITED  ,Listed    ,05 FEB 2026,              10.00,          61160088,           1526.00,    93330294288.00    
@@ -594,7 +594,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,DCG,SM,DCG CABLES & WIRES LTD   ,Listed    ,05 FEB 2026,              10.00,          18149600,             60.00,     1088976000.00       
 05 FEB 2026,DCI,EQ,DC INFOTECH AND COMUN LTD,Listed    ,05 FEB 2026,              10.00,          16000000,            236.40,     3782720000.00       
 05 FEB 2026,DCM,EQ,DCM LTD                  ,Listed    ,05 FEB 2026,              10.00,          18677749,             88.25,     1647937794.25       
-05 FEB 2026,DCMFINSERV,EQ,DCM FINANCIAL SERVICES LT,Listed    ,05 FEB 2026,              10.00,          18781987,              4.65,       87524059.40
+05 FEB 2026,DCMFINSERV,EQ,DCM FINANCIAL SERVICES LTD,Listed    ,05 FEB 2026,              10.00,          18781987,              4.65,       87524059.40
 05 FEB 2026,DCMNVL,EQ,DCM NOUVELLE LIMITED     ,Listed    ,05 FEB 2026,              10.00,          18677749,            134.95,     2520749005.05    
 05 FEB 2026,DCMSHRIRAM,EQ,DCM SHRIRAM LIMITED      ,Listed    ,05 FEB 2026,               2.00,         155942296,           1155.60,   180206917257.60
 05 FEB 2026,DCMSRIND,EQ,DCM SHRIRAM IND LTD      ,Listed    ,05 FEB 2026,               2.00,          86992185,             38.85,     3379646387.25  
@@ -642,7 +642,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,DIFFNKG,EQ,DIFFUSION ENGINEERS LTD  ,Listed    ,05 FEB 2026,              10.00,          37426259,            251.55,     9413826926.25   
 05 FEB 2026,DIGIDRIVE,EQ,DIGIDRIVE DISTRIBUTORS L ,Listed    ,05 FEB 2026,              10.00,          38561898,             22.00,      848361756.00 
 05 FEB 2026,DIGIKORE,SM,DIGIKORE STUDIOS LIMITED ,Listed    ,05 FEB 2026,              10.00,          12665600,             63.50,      804265600.00  
-05 FEB 2026,DIGISPICE,EQ,DIGISPICE TECHNOLOGIES LT,Listed    ,05 FEB 2026,               3.00,         234471106,             20.05,     4698800964.25 
+05 FEB 2026,DIGISPICE,EQ,DIGISPICE TECHNOLOGIES LTD,Listed    ,05 FEB 2026,               3.00,         234471106,             20.05,     4698800964.25 
 05 FEB 2026,DIGITIDE,EQ,DIGITIDE SOLUTIONS LTD   ,Listed    ,05 FEB 2026,              10.00,         148949413,            111.30,    16575090678.65  
 05 FEB 2026,DIGJAMLMTD,EQ,DIGJAM LTD               ,Listed    ,05 FEB 2026,              10.00,          20000000,             51.30,     1026400000.00
 05 FEB 2026,DIL,BZ,DEBOCK INDUSTRIES LIMITED,Listed    ,05 FEB 2026,              10.00,         162736115,              1.35,      216439032.95       
@@ -681,7 +681,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,DSSL,EQ,DYNACONS SYS & SOLN LTD  ,Listed    ,05 FEB 2026,              10.00,          12725330,            965.45,    12285669848.50      
 05 FEB 2026,DTIL,EQ,DHUNSERI TEA & IND. LTD. ,Listed    ,05 FEB 2026,              10.00,          10507427,            144.50,     1518533350.05      
 05 FEB 2026,DTL,SM,DIENSTEN TECH LIMITED    ,Listed    ,05 FEB 2026,              10.00,           8260646,            128.00,     1057362688.00       
-05 FEB 2026,DUCOL,SM,DUCOL ORGS AND COLOURS LT,Listed    ,05 FEB 2026,              10.00,          16254276,            131.10,     2130935583.60     
+05 FEB 2026,DUCOL,SM,DUCOL ORGS AND COLOURS LTD,Listed    ,05 FEB 2026,              10.00,          16254276,            131.10,     2130935583.60     
 05 FEB 2026,DUCON,EQ,DUCON INFRATECHNOLOGIES L,Listed    ,05 FEB 2026,               1.00,         324925587,              4.20,     1361438209.55     
 05 FEB 2026,DUGLOBAL,SM,DUDIGITAL GLOBAL LIMITED ,Listed    ,05 FEB 2026,               2.00,          71871953,             28.25,     2030382672.25  
 05 FEB 2026,DURLAX,SM,DURLAX TOP SURFACE LTD   ,Listed    ,05 FEB 2026,              10.00,          16627701,             49.45,      822239814.45    
@@ -832,7 +832,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,FUSION,EQ,FUSION FINANCE LIMITED   ,Listed    ,05 FEB 2026,              10.00,         160784443,            187.95,    30222651750.70    
 05 FEB 2026,FWSTC,SM,FLYWINGS SIMULAT T C LTD ,Listed    ,05 FEB 2026,              10.00,          10177128,            194.45,     1978942539.60     
 05 FEB 2026,GABRIEL,EQ,GABRIEL INDIA LTD        ,Listed    ,05 FEB 2026,               1.00,         143643940,            986.20,   141661653628.00   
-05 FEB 2026,GAEL,EQ,GUJARAT AMBUJA EXPORTS LT,Listed    ,05 FEB 2026,               1.00,         458670660,            128.40,    58902486157.20      
+05 FEB 2026,GAEL,EQ,GUJARAT AMBUJA EXPORTS LTD,Listed    ,05 FEB 2026,               1.00,         458670660,            128.40,    58902486157.20      
 05 FEB 2026,GAIL,EQ,GAIL (INDIA) LTD         ,Listed    ,05 FEB 2026,              10.00,        6575099644,            160.20,  1053199460975.90      
 05 FEB 2026,GAJANAND,SM,GAJANAND INTERNATIONAL L ,Listed    ,04 FEB 2026,              10.00,          18835568,              9.65,      181763231.20  
 05 FEB 2026,GALAPREC,EQ,GALA PRECISION ENG LTD   ,Listed    ,05 FEB 2026,              10.00,          12750275,            764.90,     9752685347.50  
@@ -881,7 +881,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,GKSL,EQ,GUJARAT KIDNEY N SUP SP L,Listed    ,05 FEB 2026,               2.00,          78843250,            106.95,     8431497155.00      
 05 FEB 2026,GKWLIMITED,EQ,GKW LIMITED              ,Listed    ,05 FEB 2026,              10.00,           5966500,           1698.90,    10136486850.00
 05 FEB 2026,GLAND,EQ,GLAND PHARMA LIMITED     ,Listed    ,05 FEB 2026,               1.00,         164756423,           1849.20,   304667577411.60     
-05 FEB 2026,GLAXO,EQ,GLAXOSMITHKLINE PHARMA LT,Listed    ,05 FEB 2026,              10.00,         169406034,           2444.60,   414129990716.40     
+05 FEB 2026,GLAXO,EQ,GLAXOSMITHKLINE PHARMA LTD,Listed    ,05 FEB 2026,              10.00,         169406034,           2444.60,   414129990716.40     
 05 FEB 2026,GLENMARK,EQ,GLENMARK PHARMACEUTICALS ,Listed    ,05 FEB 2026,               1.00,         282200809,           1969.30,   555738053163.70  
 05 FEB 2026,GLFL,BE,GUJARAT LEASE FINANCING L,Listed    ,05 FEB 2026,              10.00,          27125767,              4.55,      123422239.85      
 05 FEB 2026,GLOBAL,BE,GLOBAL EDUCATION LIMITED ,Listed    ,05 FEB 2026,               2.00,          50901500,             82.00,     4172904970.00    
@@ -905,7 +905,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,GOCLCORP,EQ,GOCL CORPORATION LIMITED ,Listed    ,05 FEB 2026,               2.00,          49572490,            267.30,    13250726577.00  
 05 FEB 2026,GOCOLORS,EQ,GO FASHION INDIA LTD     ,Listed    ,05 FEB 2026,              10.00,          54008984,            388.20,    20966287588.80  
 05 FEB 2026,GODAVARIB,EQ,GODAVARI BIOREFINERIES L ,Listed    ,05 FEB 2026,              10.00,          51175977,            254.65,    13031962543.05 
-05 FEB 2026,GODFRYPHLP,EQ,GODFREY PHILLIPS INDIA LT,Listed    ,05 FEB 2026,               2.00,         155981760,           1982.00,   309155848320.00
+05 FEB 2026,GODFRYPHLP,EQ,GODFREY PHILLIPS INDIA LTD,Listed    ,05 FEB 2026,               2.00,         155981760,           1982.00,   309155848320.00
 05 FEB 2026,GODIGIT,EQ,GO DIGIT GENERAL INS LTD ,Listed    ,05 FEB 2026,              10.00,         923720770,            313.00,   289124601010.00   
 05 FEB 2026,GODREJAGRO,EQ,GODREJ AGROVET LIMITED   ,Listed    ,05 FEB 2026,              10.00,         192328994,            553.75,   106502180427.50
 05 FEB 2026,GODREJCP,EQ,GODREJ CONSUMER PRODUCTS ,Listed    ,05 FEB 2026,               1.00,        1023244581,           1170.20,  1197400808686.20  
@@ -1124,7 +1124,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,INDOUS,EQ,INDO US BIOTECH LTD      ,Listed    ,05 FEB 2026,              10.00,          20052000,            125.85,     2523945240.00    
 05 FEB 2026,INDOWIND,EQ,INDOWIND ENERGY LTD      ,Listed    ,05 FEB 2026,              10.00,         161002170,             10.95,     1762973761.50  
 05 FEB 2026,INDRAMEDCO,EQ,INDRAPRASTHA MEDICAL CORP,Listed    ,05 FEB 2026,              10.00,          91673000,            383.50,    35156595500.00
-05 FEB 2026,INDSWFTLAB,EQ,IND SWIFT LABORATORIES LT,Listed    ,05 FEB 2026,              10.00,          81611558,            122.15,     9968035694.10
+05 FEB 2026,INDSWFTLAB,EQ,IND SWIFT LABORATORIES LTD,Listed    ,05 FEB 2026,              10.00,          81611558,            122.15,     9968035694.10
 05 FEB 2026,INDTERRAIN,EQ,IND TERRAIN FASHIONS LTD ,Listed    ,05 FEB 2026,               2.00,          50667367,             36.80,     1864052431.95
 05 FEB 2026,INDUSINDBK,EQ,INDUSIND BANK LIMITED    ,Listed    ,05 FEB 2026,              10.00,         779075972,            914.40,   712387068796.80
 05 FEB 2026,INDUSINVIT,IV,INDUS INFRA TRUST        ,Listed    ,05 FEB 2026,             100.00,         442938605,            123.05,    54503595345.25
@@ -1181,7 +1181,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,ITCHOTELS,EQ,ITC HOTELS LIMITED       ,Listed    ,05 FEB 2026,               1.00,        2082853588,            183.00,   381141378068.10 
 05 FEB 2026,ITDC,EQ,INDIA TOUR. DEV. CO. LTD.,Listed    ,05 FEB 2026,              10.00,          85769400,            534.05,    45805148070.00      
 05 FEB 2026,ITI,EQ,ITI LTD                  ,Listed    ,05 FEB 2026,              10.00,         960886938,            293.35,   281876183262.30       
-05 FEB 2026,ITTL,ST,INNOVATIVE TYRE & TUBE LT,Listed    ,05 FEB 2026,              10.00,          10000000,             71.15,      711500000.00      
+05 FEB 2026,ITTL,ST,INNOVATIVE TYRE & TUBE LTD,Listed    ,05 FEB 2026,              10.00,          10000000,             71.15,      711500000.00      
 05 FEB 2026,IVALUE,EQ,IVALUE INFOSOLUTIONS LTD ,Listed    ,05 FEB 2026,               2.00,          53539880,            229.80,    12303464424.00    
 05 FEB 2026,IVC,EQ,IL&FS INVESTMENT MANAGERS,Listed    ,05 FEB 2026,               2.00,         314032740,              7.70,     2418052098.00       
 05 FEB 2026,IVP,EQ,IVP LTD                  ,Listed    ,05 FEB 2026,              10.00,          10326263,            145.25,     1499992963.40       
@@ -1424,9 +1424,9 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,LOYALTEX,EQ,LOYAL TEXTILE MILLS LTD  ,Listed    ,05 FEB 2026,              10.00,           4816446,            268.10,     1291337337.05  
 05 FEB 2026,LPDC,EQ,LANDMARK PR.DEV.CO.LTD   ,Listed    ,05 FEB 2026,               1.00,         134143160,              6.55,      875954834.80      
 05 FEB 2026,LRRPL,SM,LEAD REC AND RUB PROD LTD,Listed    ,05 FEB 2026,              10.00,           8640675,             63.15,      545658626.25     
-05 FEB 2026,LT,EQ,LARSEN & TOUBRO LTD.     ,Listed    ,05 FEB 2026,               2.00,        1375580872,           4063.30,  5589397757197.60        
+05 FEB 2026,LTD,EQ,LARSEN & TOUBRO LTD.     ,Listed    ,05 FEB 2026,               2.00,        1375580872,           4063.30,  5589397757197.60        
 05 FEB 2026,LTF,EQ,L&T FINANCE LIMITED      ,Listed    ,05 FEB 2026,              10.00,        2502627626,            283.40,   709244669208.40       
-05 FEB 2026,LTFOODS,EQ,LT FOODS LIMITED         ,Listed    ,05 FEB 2026,               1.00,         347252944,            396.50,   137685792296.00   
+05 FEB 2026,LTFOODS,EQ,LTD FOODS LIMITED         ,Listed    ,05 FEB 2026,               1.00,         347252944,            396.50,   137685792296.00   
 05 FEB 2026,LTIM,EQ,LTIMINDTREE LIMITED      ,Listed    ,05 FEB 2026,               1.00,         296489245,           5683.50,  1685096623957.50      
 05 FEB 2026,LTTS,EQ,L&T TECHNOLOGY SER. LTD. ,Listed    ,05 FEB 2026,               2.00,         105989318,           3809.00,   403713312262.00      
 05 FEB 2026,LUMAXIND,EQ,LUMAX INDUSTRIES LTD     ,Listed    ,05 FEB 2026,              10.00,           9347732,           5088.20,    47563129962.40  
@@ -1470,7 +1470,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,MANAKCOAT,EQ,MAN COAT METAL & IND LTD ,Listed    ,05 FEB 2026,               1.00,         105834050,            123.90,    13111780454.50 
 05 FEB 2026,MANAKSIA,EQ,MANAKSIA LTD.            ,Listed    ,05 FEB 2026,               2.00,          65534050,             65.20,     4272820060.00  
 05 FEB 2026,MANAKSTEEL,EQ,MANAKSIA STEELS LTD      ,Listed    ,05 FEB 2026,               1.00,          65534050,             60.95,     3994300347.50
-05 FEB 2026,MANALIPETC,EQ,MANALI PETROCHEMICALS LT ,Listed    ,05 FEB 2026,               5.00,         171999229,             59.05,    10158274464.75
+05 FEB 2026,MANALIPETC,EQ,MANALI PETROCHEMICALS LTD ,Listed    ,05 FEB 2026,               5.00,         171999229,             59.05,    10158274464.75
 05 FEB 2026,MANAPPURAM,EQ,MANAPPURAM FINANCE LTD   ,Listed    ,05 FEB 2026,               2.00,         846434729,            294.75,   249486636372.75
 05 FEB 2026,MANAV,SM,MANAV INFRA PROJECTS LTD ,Listed    ,28 JAN 2026,              10.00,          13160000,             28.85,      379666000.00     
 05 FEB 2026,MANBA,EQ,MANBA FINANCE LIMITED    ,Listed    ,05 FEB 2026,              10.00,          50239410,            125.90,     6325644113.10     
@@ -1540,7 +1540,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,MEP,BZ,MEP INFRA. DEVELOPERS LTD,Listed    ,05 FEB 2026,              10.00,         183446051,              1.30,      240314326.80       
 05 FEB 2026,METROBRAND,EQ,METRO BRANDS LIMITED     ,Listed    ,05 FEB 2026,               5.00,         272433991,           1035.40,   282078154281.40
 05 FEB 2026,METROPOLIS,EQ,METROPOLIS HEALTHCARE LTD,Listed    ,05 FEB 2026,               2.00,          51821982,           1972.50,   102218859495.00
-05 FEB 2026,MFML,EQ,MAHALAXMI FABRIC MILLS LT,Listed    ,05 FEB 2026,              10.00,          10620275,             24.55,      260515345.75      
+05 FEB 2026,MFML,EQ,MAHALAXMI FABRIC MILLS LTD,Listed    ,05 FEB 2026,              10.00,          10620275,             24.55,      260515345.75      
 05 FEB 2026,MFSL,EQ,MAX FINANCIAL SERV LTD   ,Listed    ,05 FEB 2026,               2.00,         345114771,           1701.50,   587212782856.50      
 05 FEB 2026,MGEL,EQ,MANGALAM GLOBAL ENT LTD  ,Listed    ,05 FEB 2026,               1.00,         329555600,             11.80,     3888756080.00      
 05 FEB 2026,MGL,EQ,MAHANAGAR GAS LTD.       ,Listed    ,05 FEB 2026,              10.00,          98777778,           1071.50,   105840389127.00       
@@ -2164,7 +2164,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,SCHAEFFLER,EQ,SCHAEFFLER INDIA LIMITED ,Listed    ,05 FEB 2026,               2.00,         156303670,           3814.20,   596173458114.00
 05 FEB 2026,SCHAND,EQ,S CHAND AND COMPANY LTD  ,Listed    ,05 FEB 2026,               5.00,          35272192,            163.55,     5768414279.70    
 05 FEB 2026,SCHNEIDER,EQ,SCHNEIDER ELECTRIC INFRA ,Listed    ,05 FEB 2026,               2.00,         239104035,            732.35,   175107840032.25 
-05 FEB 2026,SCI,EQ,SHIPPING CORP OF INDIA LT,Listed    ,05 FEB 2026,              10.00,         465799010,            223.25,   103980313002.30       
+05 FEB 2026,SCI,EQ,SHIPPING CORP OF INDIA LTD,Listed    ,05 FEB 2026,              10.00,         465799010,            223.25,   103980313002.30       
 05 FEB 2026,SCILAL,EQ,SHIPPING CORP OF ILA LTD ,Listed    ,05 FEB 2026,              10.00,         465799010,             45.25,    21068089222.30    
 05 FEB 2026,SCML,SM,SHARP CHUCKS N MACHINES L,Listed    ,05 FEB 2026,              10.00,          11509792,            133.00,     1530802336.00      
 05 FEB 2026,SCODATUBES,EQ,SCODA TUBES LIMITED      ,Listed    ,05 FEB 2026,              10.00,          59908900,            142.05,     8511257423.00
@@ -2288,7 +2288,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,SKFINDIA,EQ,SKF INDIA LTD            ,Listed    ,05 FEB 2026,              10.00,          49437963,           1760.10,    87015758676.30  
 05 FEB 2026,SKFINDUS,EQ,SKF IND (INDUSTRIAL) LTD ,Listed    ,05 FEB 2026,              10.00,          49437963,           2497.90,   123491087777.70  
 05 FEB 2026,SKIPPER,EQ,SKIPPER LIMITED          ,Listed    ,05 FEB 2026,               1.00,         112903970,            389.10,    43930934727.00   
-05 FEB 2026,SKMEGGPROD,EQ,SKM EGG PROD EXPORT(I) LT,Listed    ,05 FEB 2026,               5.00,          52660000,            193.00,    10162326800.00
+05 FEB 2026,SKMEGGPROD,EQ,SKM EGG PROD EXPORT(I) LTD,Listed    ,05 FEB 2026,               5.00,          52660000,            193.00,    10162326800.00
 05 FEB 2026,SKP,SM,SKP BEARING INDUSTRI. LTD,Listed    ,04 FEB 2026,              10.00,          16600000,            174.10,     2890060000.00       
 05 FEB 2026,SKYGOLD,EQ,SKY GOLD AND DIAMONDS LTD,Listed    ,05 FEB 2026,              10.00,         154863884,            313.65,    48573057216.60   
 05 FEB 2026,SLONE,SM,SLONE INFOSYSTEMS LIMITED,Listed    ,05 FEB 2026,              10.00,           5269013,            214.00,     1127568782.00     
@@ -2409,7 +2409,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,SURAJLTD,EQ,SURAJ LIMITED            ,Listed    ,05 FEB 2026,              10.00,          18364100,            230.55,     4234026896.00  
 05 FEB 2026,SURAKSHA,EQ,SURAKSHA DIAGNOSTIC LTD  ,Listed    ,05 FEB 2026,               2.00,          52080758,            286.00,    14895096788.00  
 05 FEB 2026,SURANASOL,EQ,SURANA SOLAR LIMITED     ,Listed    ,05 FEB 2026,               5.00,          49206600,             24.85,     1222291944.00 
-05 FEB 2026,SURANAT&P,EQ,SURANA TELECOM AND POW LT,Listed    ,05 FEB 2026,               1.00,         135759963,             17.95,     2436891335.85 
+05 FEB 2026,SURANAT&P,EQ,SURANA TELECOM AND POW LTD,Listed    ,05 FEB 2026,               1.00,         135759963,             17.95,     2436891335.85 
 05 FEB 2026,SURANI,SM,SURANI STEEL TUBES LTD.  ,Listed    ,05 FEB 2026,              10.00,          15548036,             59.90,      931327356.40    
 05 FEB 2026,SURYALAXMI,EQ,SURYALAKSHMI COT MIL LTD ,Listed    ,05 FEB 2026,              10.00,          18805290,             60.05,     1129445717.40
 05 FEB 2026,SURYAROSNI,EQ,SURYA ROSHNI LTD         ,Listed    ,05 FEB 2026,               5.00,         217635896,            255.90,    55695202145.35
@@ -2470,7 +2470,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,TCIFINANCE,BE,TCIFINANCELTD-ROLL SETT  ,Listed    ,05 FEB 2026,              10.00,          12872493,             16.15,      207633312.10
 05 FEB 2026,TCL,SM,THAAI CASTING LIMITED    ,Listed    ,05 FEB 2026,              10.00,          24341437,             89.50,     2178558611.50       
 05 FEB 2026,TCPLPACK,EQ,TCPL PACKAGING LIMITED   ,Listed    ,05 FEB 2026,              10.00,           9100000,           2704.20,    24608220000.00  
-05 FEB 2026,TCS,EQ,TATA CONSULTANCY SERV LT ,Listed    ,05 FEB 2026,               1.00,        3618087518,           2991.50, 10823508810097.00       
+05 FEB 2026,TCS,EQ,TATA CONSULTANCY SERV LTD ,Listed    ,05 FEB 2026,               1.00,        3618087518,           2991.50, 10823508810097.00       
 05 FEB 2026,TDPOWERSYS,EQ,TD POWER SYSTEMS LTD.    ,Listed    ,05 FEB 2026,               2.00,         156214830,            809.60,   126471526368.00
 05 FEB 2026,TEAMGTY,EQ,TEAM INDIA GUARANTY LTD  ,Listed    ,05 FEB 2026,              10.00,           8993149,            265.80,     2390379004.20   
 05 FEB 2026,TEAMLEASE,EQ,TEAMLEASE SERVICES LTD.  ,Listed    ,05 FEB 2026,              10.00,          16768900,           1444.80,    24227706720.00 
@@ -2680,7 +2680,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,VINDHYATEL,EQ,VINDHYA TELELINKS LTD    ,Listed    ,05 FEB 2026,              10.00,          11850863,           1266.50,    15009117989.50
 05 FEB 2026,VINEETLAB,EQ,VINEET LABORATORIES LTD  ,Listed    ,05 FEB 2026,              10.00,          19206267,             31.40,      603076783.80 
 05 FEB 2026,VINNY,EQ,VINNY OVERSEAS LIMITED   ,Listed    ,05 FEB 2026,               1.00,         465246622,              1.20,      562948412.60     
-05 FEB 2026,VINSYS,SM,VINSYS IT SERVICES IND LT,Listed    ,05 FEB 2026,              10.00,          14677927,            309.85,     4547955680.95    
+05 FEB 2026,VINSYS,SM,VINSYS IT SERVICES IND LTD,Listed    ,05 FEB 2026,              10.00,          14677927,            309.85,     4547955680.95    
 05 FEB 2026,VINYAS,SM,VINYAS INNOVATIVE TECH L ,Listed    ,05 FEB 2026,              10.00,          12584726,           1055.65,    13285066001.90    
 05 FEB 2026,VINYLINDIA,EQ,VINYL CHEMICALS (I) LTD. ,Listed    ,05 FEB 2026,               1.00,          18337111,            215.90,     3959165636.00
 05 FEB 2026,VIPCLOTHNG,EQ,VIP CLOTHING LIMITED     ,Listed    ,05 FEB 2026,               2.00,          90129519,             25.60,     2307315686.40
@@ -2758,7 +2758,7 @@ Trade Date,Symbol,Series,Security Name,Category,Last Trade Date,Face Value(Rs.),
 05 FEB 2026,WONDERLA,EQ,WONDERLA HOLIDAYS LTD.   ,Listed    ,05 FEB 2026,              10.00,          63422766,            515.20,    32675409043.20  
 05 FEB 2026,WORTHPERI,EQ,WORTH PERIPHERALS LIMITED,Listed    ,05 FEB 2026,              10.00,          15751000,            136.75,     2153634230.00 
 05 FEB 2026,WSI,EQ,W.S.INDUSTRIES (I) LTD.  ,Listed    ,05 FEB 2026,              10.00,          65918749,             80.10,     5280091794.90       
-05 FEB 2026,WSTCSTPAPR,EQ,WEST COAST PAPER MILLS LT,Listed    ,05 FEB 2026,               2.00,          66048908,            439.50,    29028495066.00
+05 FEB 2026,WSTCSTPAPR,EQ,WEST COAST PAPER MILLS LTD,Listed    ,05 FEB 2026,               2.00,          66048908,            439.50,    29028495066.00
 05 FEB 2026,WTICAB,SM,WISE TRAVEL INDIA LIMITED,Listed    ,05 FEB 2026,              10.00,          23811837,            118.35,     2818130908.95    
 05 FEB 2026,XCHANGING,EQ,XCHANGING SOLUTIONS LTD  ,Listed    ,05 FEB 2026,              10.00,         111403716,             72.55,     8084567670.10 
 05 FEB 2026,XELPMOC,EQ,XELPMOC DESIGN & TECH LTD,Listed    ,05 FEB 2026,              10.00,          14759493,            132.60,     1957256366.75   
