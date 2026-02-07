@@ -1,38 +1,43 @@
 body {
-    font-family: Arial, sans-serif;
-    background: #0e1117;
-    color: #e6e6e6;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #f6f8fb;
     margin: 0;
+    color: #1f2937;
 }
 
 .top-bar {
+    background: #ffffff;
     padding: 16px 24px;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .top-bar h1 {
     margin: 0;
-    font-size: 22px;
+    font-size: 20px;
+    font-weight: 600;
 }
 
 .tabs {
     display: flex;
-    gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid #222;
+    gap: 6px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .tab {
-    background: #1a1f2b;
-    color: #ddd;
-    border: none;
-    padding: 6px 12px;
-    cursor: pointer;
+    padding: 6px 14px;
     border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .tab.active {
-    background: #2b6cb0;
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
 }
 
 .tab.add {
@@ -42,71 +47,87 @@ body {
 .search-box {
     position: relative;
     padding: 16px;
+    background: #ffffff;
 }
 
-#search {
-    width: 260px;
-    padding: 8px;
-    background: #1a1f2b;
-    border: 1px solid #333;
-    color: #fff;
+.search-box input {
+    width: 320px;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
 }
 
 #suggestions {
     position: absolute;
-    background: #1a1f2b;
-    border: 1px solid #333;
-    width: 260px;
+    background: white;
+    width: 320px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-top: 4px;
     z-index: 10;
 }
 
 .suggestion-item {
-    padding: 6px 8px;
+    padding: 8px 10px;
     cursor: pointer;
 }
 
 .suggestion-item:hover {
-    background: #2b6cb0;
+    background: #f3f4f6;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    background: white;
 }
 
 th, td {
-    padding: 8px;
-    border-bottom: 1px solid #222;
+    padding: 10px;
     text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
 }
 
-tr {
-    cursor: pointer;
+th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+
+tr:hover {
+    background: #f3f4f6;
+}
+
+/* 🔴🟢 PRICE BLINK */
+.blink-up {
+    animation: upFlash 0.6s ease;
+    color: #15803d;
+}
+
+.blink-down {
+    animation: downFlash 0.6s ease;
+    color: #b91c1c;
+}
+
+@keyframes upFlash {
+    0% { background: #dcfce7; }
+    100% { background: transparent; }
+}
+
+@keyframes downFlash {
+    0% { background: #fee2e2; }
+    100% { background: transparent; }
 }
 
 button {
     background: none;
     border: none;
-    color: #ff5c5c;
     cursor: pointer;
     font-size: 16px;
+    color: #9ca3af;
 }
 
-/* 🔥 PRICE BLINK ANIMATIONS */
-.price-up {
-    animation: flashGreen 0.8s ease;
-}
-
-.price-down {
-    animation: flashRed 0.8s ease;
-}
-
-@keyframes flashGreen {
-    0% { background-color: rgba(0, 200, 100, 0.45); }
-    100% { background-color: transparent; }
-}
-
-@keyframes flashRed {
-    0% { background-color: rgba(220, 50, 50, 0.45); }
-    100% { background-color: transparent; }
+button:hover {
+    color: #ef4444;
 }
