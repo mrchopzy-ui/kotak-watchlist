@@ -1,32 +1,38 @@
 body {
-    margin: 0;
     font-family: Arial, sans-serif;
-    background: #f4f6f9;
+    background: #0e1117;
+    color: #e6e6e6;
+    margin: 0;
 }
 
 .top-bar {
-    background: #0b1c2d;
-    color: white;
-    padding: 15px 30px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #222;
+}
+
+.top-bar h1 {
+    margin: 0;
+    font-size: 22px;
 }
 
 .tabs {
-    background: white;
-    padding: 10px 30px;
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #222;
 }
 
 .tab {
-    padding: 6px 14px;
-    margin-right: 6px;
-    border-radius: 6px;
+    background: #1a1f2b;
+    color: #ddd;
     border: none;
-    background: #e9ecf1;
+    padding: 6px 12px;
     cursor: pointer;
+    border-radius: 6px;
 }
 
 .tab.active {
-    background: #0b1c2d;
-    color: white;
+    background: #2b6cb0;
 }
 
 .tab.add {
@@ -34,41 +40,73 @@ body {
 }
 
 .search-box {
-    margin: 20px 30px;
     position: relative;
-    width: 300px;
+    padding: 16px;
 }
 
 #search {
-    width: 100%;
-    padding: 10px;
+    width: 260px;
+    padding: 8px;
+    background: #1a1f2b;
+    border: 1px solid #333;
+    color: #fff;
 }
 
 #suggestions {
     position: absolute;
-    background: white;
-    width: 100%;
-    border: 1px solid #ccc;
+    background: #1a1f2b;
+    border: 1px solid #333;
+    width: 260px;
     z-index: 10;
 }
 
 .suggestion-item {
-    padding: 8px;
+    padding: 6px 8px;
     cursor: pointer;
 }
 
 .suggestion-item:hover {
-    background: #eef2f7;
+    background: #2b6cb0;
 }
 
 table {
-    margin: 0 30px 30px;
-    width: calc(100% - 60px);
-    background: white;
+    width: 100%;
     border-collapse: collapse;
 }
 
 th, td {
-    padding: 10px;
+    padding: 8px;
+    border-bottom: 1px solid #222;
     text-align: center;
+}
+
+tr {
+    cursor: pointer;
+}
+
+button {
+    background: none;
+    border: none;
+    color: #ff5c5c;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* 🔥 PRICE BLINK ANIMATIONS */
+.price-up {
+    animation: flashGreen 0.8s ease;
+}
+
+.price-down {
+    animation: flashRed 0.8s ease;
+}
+
+@keyframes flashGreen {
+    0% { background-color: rgba(0, 200, 100, 0.45); }
+    100% { background-color: transparent; }
+}
+
+@keyframes flashRed {
+    0% { background-color: rgba(220, 50, 50, 0.45); }
+    100% { background-color: transparent; }
 }
