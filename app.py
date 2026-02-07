@@ -12,7 +12,7 @@ TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 DB_FILE = "watchlists.db"
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-MCAP_FILE = "data/mcap05022026.csv"
+MCAP_FILE = "data/BhavCopy_NSE_CM_0_0_0_20260206_F_0000.csv"
 
 SESSION = {}
 SCRIPS = []
