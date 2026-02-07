@@ -70,18 +70,11 @@ def login():
 
 login()
 
-# ================= LOAD EQ-ONLY SCRIP MASTER =================
+# ================= LOAD SCRIP MASTER =================
 with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    for r in reader:
-        # 🔒 HARD FILTER — ONLY EQ
-        if r.get("series") == "EQ":
-            SCRIPS.append({
-                "trading_symbol": r["trading_symbol"],
-                "exchange_token": r["exchange_token"]
-            })
+    SCRIPS = list(csv.DictReader(f))
 
-# ================= LOAD COMPANY NAMES =================
+# ================= LOAD COMPANY NAMES (MCAP FILE) =================
 with open(MCAP_FILE, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for r in reader:
