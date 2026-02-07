@@ -1,137 +1,132 @@
 body {
     font-family: "Segoe UI", system-ui, sans-serif;
-    background: #ffffff;
+    background: #f4f6f9;
     margin: 0;
-    color: #1f2937;
+    color: #111827;
 }
 
-/* ================= HEADER ================= */
 .top-bar {
     background: #ffffff;
-    padding: 28px 24px 18px;
+    padding: 28px 40px;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     justify-content: center;
 }
 
 .logo {
-    height: 88px;
-    object-fit: contain;
+    height: 90px;
 }
 
-/* ================= TABS ================= */
 .tabs {
     display: flex;
     gap: 8px;
-    padding: 14px 20px;
+    padding: 12px 20px;
     background: #ffffff;
     border-bottom: 1px solid #e5e7eb;
 }
 
 .tab {
-    padding: 7px 16px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: #fafafa;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.2s ease;
-}
-
-.tab:hover {
-    border-color: #f59e0b;
 }
 
 .tab.active {
-    background: linear-gradient(90deg, #fbbf24, #ec4899);
+    background: #2563eb;
     color: #ffffff;
-    border: none;
+    border-color: #2563eb;
 }
 
 .tab.add {
     font-weight: 600;
 }
 
-/* ================= SEARCH ================= */
 .search-box {
     position: relative;
-    padding: 18px 20px;
+    padding: 20px;
     background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .search-box input {
-    width: 340px;
-    padding: 10px 12px;
+    width: 360px;
+    padding: 12px;
     font-size: 14px;
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid #d1d5db;
 }
 
 #suggestions {
     position: absolute;
     background: #ffffff;
-    width: 340px;
+    width: 360px;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    margin-top: 6px;
-    z-index: 20;
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 10;
 }
 
 .suggestion-item {
-    padding: 9px 12px;
+    padding: 10px 12px;
     cursor: pointer;
 }
 
 .suggestion-item:hover {
-    background: #fef3c7;
+    background: #f3f4f6;
 }
 
-/* ================= TABLE ================= */
+.table-wrapper {
+    padding: 16px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 th, td {
-    padding: 11px;
+    padding: 12px;
     text-align: center;
     border-bottom: 1px solid #e5e7eb;
     font-size: 14px;
 }
 
 th {
-    background: #fafafa;
+    background: #f9fafb;
     font-weight: 600;
-    color: #374151;
 }
 
 tr:hover {
-    background: #fffbeb;
+    background: #f3f4f6;
 }
 
-/* ================= PRICE BLINK ================= */
+/* Price blink */
 .blink-up {
-    animation: upFlash 0.6s ease;
     color: #15803d;
+    animation: upFlash 0.6s ease;
 }
 
 .blink-down {
-    animation: downFlash 0.6s ease;
     color: #b91c1c;
+    animation: downFlash 0.6s ease;
 }
 
 @keyframes upFlash {
-    0% { background: #dcfce7; }
-    100% { background: transparent; }
+    from { background: #dcfce7; }
+    to { background: transparent; }
 }
 
 @keyframes downFlash {
-    0% { background: #fee2e2; }
-    100% { background: transparent; }
+    from { background: #fee2e2; }
+    to { background: transparent; }
 }
 
-/* ================= BUTTONS ================= */
 button {
     background: none;
     border: none;
@@ -141,5 +136,5 @@ button {
 }
 
 button:hover {
-    color: #dc2626;
+    color: #ef4444;
 }
