@@ -3,22 +3,18 @@ import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
-# ================= ENV =================
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
+DATA_FILE = "data/nse_eq_scrip_master.csv"
 DB_FILE = "watchlists.db"
-SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-MCAP_FILE = "data/mcap05022026.csv"
 
 SESSION = {}
 SCRIPS = []
-COMPANY_MAP = {}
 
-# ================= DB =================
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -45,10 +41,8 @@ def init_db():
 
 init_db()
 
-# ================= LOGIN =================
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
-
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
         headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
@@ -70,21 +64,9 @@ def login():
 
 login()
 
-# ================= LOAD SCRIP MASTER (FIXED ENCODING) =================
-with open(SCRIP_FILE, newline="", encoding="latin-1", errors="ignore") as f:
+with open(DATA_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
-# ================= LOAD COMPANY NAMES (MCAP FILE – FIXED ENCODING) =================
-with open(MCAP_FILE, newline="", encoding="latin-1", errors="ignore") as f:
-    reader = csv.DictReader(f)
-    for r in reader:
-        if r.get("Series") == "EQ":
-            sym = r.get("Symbol", "").strip().upper()
-            name = r.get("Security Name", "").strip()
-            if sym and name:
-                COMPANY_MAP[sym] = name
-
-# ================= HELPERS =================
 def get_watchlists():
     con = db()
     rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
@@ -92,10 +74,7 @@ def get_watchlists():
     return rows
 
 def format_volume(v):
-    try:
-        v = float(v)
-    except:
-        return "0"
+    v = float(v)
     if v >= 1_000_000_000:
         return f"{v/1_000_000_000:.2f}B"
     if v >= 1_000_000:
@@ -104,11 +83,6 @@ def format_volume(v):
         return f"{v/1_000:.2f}K"
     return str(int(v))
 
-def get_company_name(trading_symbol):
-    base = trading_symbol.replace("-EQ", "").upper()
-    return COMPANY_MAP.get(base, base)
-
-# ================= ROUTES =================
 @app.route("/")
 def index():
     return render_template("index.html", watchlists=get_watchlists())
@@ -180,16 +154,15 @@ def prices():
         o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company_name": get_company_name(s[0]),
-            "ltp": round(float(q.get("ltp", 0)), 2),
-            "pct": round(float(q.get("per_change", 0)), 2),
+            "company_name": q.get("instrumentName", s[0].replace("-EQ", "")),
+            "ltp": float(q.get("ltp", 0)),
+            "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
             "open": o.get("open", 0),
             "high": o.get("high", 0),
             "low": o.get("low", 0),
             "close": o.get("close", 0)
         })
-
     return jsonify(out)
 
 if __name__ == "__main__":
