@@ -4,8 +4,9 @@ const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
-let timer = null;
+let priceTimer = null;
 
+/* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
     if (!name) return;
@@ -17,12 +18,13 @@ addBtn.onclick = async () => {
     location.reload();
 };
 
+/* ---------- TAB SWITCH & RENAME ---------- */
 document.querySelectorAll(".tab[data-id]").forEach(tab => {
     tab.onclick = () => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
-        start();
+        startPriceRefresh();
     };
 
     tab.ondblclick = async () => {
@@ -37,7 +39,8 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
     };
 });
 
-search.oninput = async () => {
+/* ---------- SEARCH ---------- */
+search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
 
@@ -56,13 +59,14 @@ search.oninput = async () => {
             });
             search.value = "";
             suggestions.innerHTML = "";
-            load();
+            loadPrices();
         };
         suggestions.appendChild(d);
     });
-};
+});
 
-async function load() {
+/* ---------- LOAD PRICES ---------- */
+async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
     const data = await res.json();
     tbody.innerHTML = "";
@@ -70,7 +74,7 @@ async function load() {
     data.forEach(s => {
         const tv = s.symbol.replace("-EQ", "");
         tbody.innerHTML += `
-        <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${tv}','_blank')">
+        <tr onclick="openChart('${tv}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td>${s.ltp.toFixed(2)}</td>
@@ -87,20 +91,26 @@ async function load() {
     });
 }
 
+/* ---------- TRADINGVIEW ---------- */
+function openChart(sym) {
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
+}
+
+/* ---------- AUTO REFRESH ---------- */
+function startPriceRefresh() {
+    if (priceTimer) clearInterval(priceTimer);
+    loadPrices();
+    priceTimer = setInterval(loadPrices, 5000);
+}
+
 async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
-    load();
-}
-
-function start() {
-    if (timer) clearInterval(timer);
-    load();
-    timer = setInterval(load, 5000);
+    loadPrices();
 }
 
 document.querySelector(".tab[data-id]").classList.add("active");
-start();
+startPriceRefresh();
