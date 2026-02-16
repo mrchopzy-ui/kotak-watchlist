@@ -81,13 +81,13 @@ async function load() {
             <td>${s.low}</td>
             <td>${s.close}</td>
             <td>
-                <button onclick="event.stopPropagation(); remove('${s.symbol}')">✕</button>
+                <button onclick="event.stopPropagation(); removeStock('${s.symbol}')">✕</button>
             </td>
         </tr>`;
     });
 }
 
-async function remove(sym) {
+async function removeStock(sym) {
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
