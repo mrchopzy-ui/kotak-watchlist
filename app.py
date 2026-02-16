@@ -3,7 +3,7 @@ import csv, os, sqlite3, requests, pyotp
 
 app = Flask(__name__)
 
-# ---------- ENV ----------
+# ================= ENV =================
 ACCESS_TOKEN = os.getenv("KOTAK_ACCESS_TOKEN")
 MOBILE = os.getenv("KOTAK_MOBILE")
 USER_ID = os.getenv("KOTAK_USER_ID")
@@ -12,13 +12,13 @@ TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
 DB_FILE = "watchlists.db"
 SCRIP_FILE = "data/nse_eq_scrip_master.csv"
-EQUITY_FILE = "data/EQUITY_L.csv"
+MCAP_FILE = "data/mcap05022026.csv"
 
 SESSION = {}
 SCRIPS = []
 COMPANY_MAP = {}
 
-# ---------- DB ----------
+# ================= DB =================
 def db():
     return sqlite3.connect(DB_FILE)
 
@@ -45,7 +45,7 @@ def init_db():
 
 init_db()
 
-# ---------- LOGIN ----------
+# ================= LOGIN =================
 def login():
     totp = pyotp.TOTP(TOTP_SECRET).now()
 
@@ -70,20 +70,21 @@ def login():
 
 login()
 
-# ---------- LOAD SCRIP MASTER (FIXED ENCODING) ----------
-with open(SCRIP_FILE, newline="", encoding="latin-1") as f:
+# ================= LOAD SCRIP MASTER =================
+with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
-# ---------- LOAD EQUITY_L COMPANY NAMES ----------
-with open(EQUITY_FILE, newline="", encoding="utf-8") as f:
+# ================= LOAD COMPANY NAMES (MCAP FILE) =================
+with open(MCAP_FILE, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for r in reader:
-        sym = r.get("SYMBOL") or r.get("Symbol")
-        name = r.get("NAME") or r.get("Name")
-        if sym and name:
-            COMPANY_MAP[sym.strip().upper()] = name.strip()
+        if r.get("Series") == "EQ":
+            sym = r.get("Symbol", "").strip().upper()
+            name = r.get("Security Name", "").strip()
+            if sym and name:
+                COMPANY_MAP[sym] = name
 
-# ---------- HELPERS ----------
+# ================= HELPERS =================
 def get_watchlists():
     con = db()
     rows = con.execute("SELECT id, name FROM watchlists ORDER BY id").fetchall()
@@ -91,7 +92,10 @@ def get_watchlists():
     return rows
 
 def format_volume(v):
-    v = float(v)
+    try:
+        v = float(v)
+    except:
+        return "0"
     if v >= 1_000_000_000:
         return f"{v/1_000_000_000:.2f}B"
     if v >= 1_000_000:
@@ -104,7 +108,7 @@ def get_company_name(trading_symbol):
     base = trading_symbol.replace("-EQ", "").upper()
     return COMPANY_MAP.get(base, base)
 
-# ---------- ROUTES ----------
+# ================= ROUTES =================
 @app.route("/")
 def index():
     return render_template("index.html", watchlists=get_watchlists())
