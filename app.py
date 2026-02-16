@@ -70,12 +70,12 @@ def login():
 
 login()
 
-# ================= LOAD SCRIP MASTER =================
-with open(SCRIP_FILE, newline="", encoding="utf-8") as f:
+# ================= LOAD SCRIP MASTER (FIXED ENCODING) =================
+with open(SCRIP_FILE, newline="", encoding="latin-1", errors="ignore") as f:
     SCRIPS = list(csv.DictReader(f))
 
-# ================= LOAD COMPANY NAMES (MCAP FILE) =================
-with open(MCAP_FILE, newline="", encoding="utf-8") as f:
+# ================= LOAD COMPANY NAMES (MCAP FILE – FIXED ENCODING) =================
+with open(MCAP_FILE, newline="", encoding="latin-1", errors="ignore") as f:
     reader = csv.DictReader(f)
     for r in reader:
         if r.get("Series") == "EQ":
@@ -181,8 +181,8 @@ def prices():
         out.append({
             "symbol": s[0],
             "company_name": get_company_name(s[0]),
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
+            "ltp": round(float(q.get("ltp", 0)), 2),
+            "pct": round(float(q.get("per_change", 0)), 2),
             "volume": format_volume(q.get("last_volume", 0)),
             "open": o.get("open", 0),
             "high": o.get("high", 0),
