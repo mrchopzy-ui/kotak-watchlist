@@ -4,74 +4,92 @@ const tbody = document.getElementById("watchlist");
 const addWL = document.getElementById("addWatchlist");
 
 let active = document.querySelector(".tab").dataset.id;
+let refreshTimer = null;
 
-function load() {
-    fetch(`/prices?wid=${active}`)
-        .then(r => r.json())
-        .then(d => {
-            tbody.innerHTML = "";
-            d.forEach(s => {
-                const base = s.symbol.replace(/-EQ$/, "").replace(/\d+/g,"");
-                tbody.innerHTML += `
-                <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${base}','_blank')">
-                    <td>${s.symbol}</td>
-                    <td>${s.company}</td>
-                    <td>${s.ltp.toFixed(2)}</td>
-                    <td>${s.pct.toFixed(2)}%</td>
-                    <td><button onclick="event.stopPropagation();remove('${s.symbol}')">✕</button></td>
-                </tr>`;
-            });
-        });
+/* ---------- LOAD PRICES ---------- */
+async function loadPrices() {
+    const res = await fetch(`/prices?wid=${active}`);
+    const data = await res.json();
+
+    tbody.innerHTML = "";
+    data.forEach(s => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${s.symbol}</td>
+            <td>${s.company}</td>
+            <td>${s.ltp.toFixed(2)}</td>
+            <td>${s.pct.toFixed(2)}%</td>
+            <td>
+                <button onclick="removeStock('${s.symbol}')">✕</button>
+            </td>
+        </tr>`;
+    });
 }
 
-function remove(sym){
-    fetch(`/remove?wid=${active}`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({symbol:sym})
-    }).then(load);
+/* ---------- REMOVE ---------- */
+async function removeStock(sym) {
+    await fetch(`/remove?wid=${active}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({symbol: sym})
+    });
+    loadPrices();
 }
 
-search.oninput = () => {
+/* ---------- SEARCH ---------- */
+search.addEventListener("input", async () => {
     suggestions.innerHTML = "";
-    if(!search.value) return;
+    if (!search.value.trim()) return;
 
-    fetch(`/search?q=${search.value}`)
-        .then(r=>r.json())
-        .then(d=>{
-            d.forEach(s=>{
-                const div=document.createElement("div");
-                div.className="suggestion";
-                div.innerText = `${s.symbol} (${s.segment})`;
-                div.onclick=()=>{
-                    fetch(`/add?wid=${active}`,{
-                        method:"POST",
-                        headers:{"Content-Type":"application/json"},
-                        body:JSON.stringify(s)
-                    }).then(load);
-                    suggestions.innerHTML="";
-                    search.value="";
-                };
-                suggestions.appendChild(div);
+    const res = await fetch(`/search?q=${search.value}`);
+    const data = await res.json();
+
+    data.forEach(s => {
+        const div = document.createElement("div");
+        div.className = "suggestion";
+        div.textContent = `${s.symbol} (${s.segment})`;
+
+        div.onclick = async () => {
+            await fetch(`/add?wid=${active}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(s)
             });
-        });
-};
 
-document.querySelectorAll(".tab").forEach(t=>{
-    t.onclick=()=>{
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+            search.value = "";
+            suggestions.innerHTML = "";
+            await loadPrices(); // 🔑 WAIT FOR INSERT
+        };
+
+        suggestions.appendChild(div);
+    });
+});
+
+/* ---------- TABS ---------- */
+document.querySelectorAll(".tab").forEach(t => {
+    t.onclick = () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
         t.classList.add("active");
-        active=t.dataset.id;
-        load();
+        active = t.dataset.id;
+        loadPrices();
     };
 });
 
-addWL.onclick=()=>{
-    const n=prompt("Watchlist name");
-    if(!n) return;
-    fetch("/watchlist",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})})
-        .then(()=>location.reload());
+/* ---------- ADD WATCHLIST ---------- */
+addWL.onclick = async () => {
+    const name = prompt("Watchlist name");
+    if (!name) return;
+
+    await fetch("/watchlist", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name})
+    });
+
+    location.reload();
 };
 
-setInterval(load,5000);
-load();
+/* ---------- AUTO REFRESH ---------- */
+if (refreshTimer) clearInterval(refreshTimer);
+refreshTimer = setInterval(loadPrices, 5000);
+loadPrices();
