@@ -1,74 +1,13 @@
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f4f6f9;
-}
-
-.top-bar {
-    background: #0b1c2d;
-    color: white;
-    padding: 15px 30px;
-}
-
-.tabs {
-    background: white;
-    padding: 10px 30px;
-}
-
-.tab {
-    padding: 6px 14px;
-    margin-right: 6px;
-    border-radius: 6px;
-    border: none;
-    background: #e9ecf1;
-    cursor: pointer;
-}
-
-.tab.active {
-    background: #0b1c2d;
-    color: white;
-}
-
-.tab.add {
-    font-weight: bold;
-}
-
-.search-box {
-    margin: 20px 30px;
-    position: relative;
-    width: 300px;
-}
-
-#search {
-    width: 100%;
-    padding: 10px;
-}
-
-#suggestions {
-    position: absolute;
-    background: white;
-    width: 100%;
-    border: 1px solid #ccc;
-    z-index: 10;
-}
-
-.suggestion-item {
-    padding: 8px;
-    cursor: pointer;
-}
-
-.suggestion-item:hover {
-    background: #eef2f7;
-}
-
-table {
-    margin: 0 30px 30px;
-    width: calc(100% - 60px);
-    background: white;
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 10px;
-    text-align: center;
-}
+body{font-family:Arial;background:#f7f7f7;margin:0}
+header{padding:15px 30px;background:#111;color:#fff}
+.tabs{display:flex;gap:10px;padding:10px}
+.tab{padding:8px 14px;background:#ddd;cursor:pointer}
+.tab.active{background:#111;color:#fff}
+.search{padding:10px;position:relative}
+#suggestions{position:absolute;background:#fff;border:1px solid #ccc;width:300px}
+#suggestions div{padding:6px;cursor:pointer}
+#suggestions div:hover{background:#eee}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #ddd;text-align:center}
+tr:hover{background:#eef}
+button{cursor:pointer}
