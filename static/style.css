@@ -16,13 +16,13 @@ input {
     background:#111827;
     color:white;
     border:1px solid #374151;
-    width:320px;
+    width:300px;
 }
 
 #suggestions {
     position:absolute;
     background:#020617;
-    width:320px;
+    width:300px;
     z-index:10;
 }
 
@@ -61,7 +61,6 @@ th,td {
 tr:hover {
     background:#020617;
 }
-
 button {
     background:none;
     border:none;
