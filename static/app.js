@@ -1,34 +1,64 @@
-let wid = document.querySelector(".tab").dataset.id;
-let rows = document.getElementById("rows");
+let active = document.querySelector(".tab").dataset.id;
+let timer = null;
 
 document.querySelectorAll(".tab").forEach(t=>{
-  t.onclick=()=>{wid=t.dataset.id;load();}
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    active=t.dataset.id;
+    start();
+  }
 });
 
-document.getElementById("addWL").onclick=async()=>{
-  let n=prompt("Name"); if(!n) return;
-  await fetch("/watchlist",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});
+document.getElementById("addWatchlist").onclick=async()=>{
+  const n=prompt("Watchlist name");
+  if(!n)return;
+  await fetch("/watchlist",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})});
   location.reload();
 };
 
+const search=document.getElementById("search");
+const sug=document.getElementById("suggestions");
+
+search.oninput=async()=>{
+  sug.innerHTML="";
+  if(!search.value)return;
+  const r=await fetch(`/search?q=${search.value}`);
+  const d=await r.json();
+  d.forEach(s=>{
+    const div=document.createElement("div");
+    div.innerText=s.trading_symbol;
+    div.onclick=async()=>{
+      await fetch(`/add?wid=${active}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(s)});
+      search.value="";
+      sug.innerHTML="";
+      load();
+    };
+    sug.appendChild(div);
+  });
+};
+
 async function load(){
-  let r=await fetch(`/prices?wid=${wid}`); let d=await r.json();
-  rows.innerHTML="";
+  const r=await fetch(`/prices?wid=${active}`);
+  const d=await r.json();
+  const tb=document.getElementById("watchlist");
+  tb.innerHTML="";
   d.forEach(x=>{
-    rows.innerHTML+=`
+    tb.innerHTML+=`
     <tr onclick="chart('${x.symbol}')">
       <td>${x.symbol}</td>
-      <td>${x.name}</td>
+      <td>${x.company}</td>
       <td>${x.ltp.toFixed(2)}</td>
       <td>${x.pct.toFixed(2)}%</td>
-      <td><button onclick="event.stopPropagation();del(${x.id})">✕</button></td>
+      <td>${x.volume}</td>
+      <td>${x.open}</td><td>${x.high}</td><td>${x.low}</td><td>${x.close}</td>
+      <td><button onclick="event.stopPropagation();del('${x.exchange_segment}','${x.exchange_token}')">✕</button></td>
     </tr>`;
   });
 }
-load(); setInterval(load,5000);
 
-async function del(id){
-  await fetch("/remove",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+async function del(seg, tok){
+  await fetch(`/remove?wid=${active}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({exchange_segment:seg,exchange_token:tok})});
   load();
 }
 
@@ -36,21 +66,11 @@ function chart(sym){
   window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym.replace("-EQ","")}`,"_blank");
 }
 
-search.oninput=async()=>{
-  suggestions.innerHTML="";
-  if(!search.value) return;
-  let r=await fetch(`/search?q=${search.value}`); let d=await r.json();
-  d.forEach(s=>{
-    let div=document.createElement("div");
-    div.innerText=s.display_name;
-    div.onclick=async()=>{
-      await fetch(`/add?wid=${wid}`,{
-        method:"POST",
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(s)
-      });
-      suggestions.innerHTML=""; search.value=""; load();
-    };
-    suggestions.appendChild(div);
-  });
-};
+function start(){
+  if(timer)clearInterval(timer);
+  load();
+  timer=setInterval(load,5000);
+}
+
+start();
+          
