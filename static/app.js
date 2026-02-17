@@ -1,5 +1,5 @@
-let active = document.querySelector(".tab").dataset.id;
-let timer = null;
+let active=document.querySelector(".tab").dataset.id;
+let timer=null;
 
 document.querySelectorAll(".tab").forEach(t=>{
   t.onclick=()=>{
@@ -9,13 +9,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     start();
   }
 });
-
-document.getElementById("addWatchlist").onclick=async()=>{
-  const n=prompt("Watchlist name");
-  if(!n)return;
-  await fetch("/watchlist",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})});
-  location.reload();
-};
 
 const search=document.getElementById("search");
 const sug=document.getElementById("suggestions");
@@ -29,7 +22,11 @@ search.oninput=async()=>{
     const div=document.createElement("div");
     div.innerText=s.trading_symbol;
     div.onclick=async()=>{
-      await fetch(`/add?wid=${active}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(s)});
+      await fetch(`/add?wid=${active}`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(s)
+      });
       search.value="";
       sug.innerHTML="";
       load();
@@ -57,8 +54,12 @@ async function load(){
   });
 }
 
-async function del(seg, tok){
-  await fetch(`/remove?wid=${active}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({exchange_segment:seg,exchange_token:tok})});
+async function del(seg,tok){
+  await fetch(`/remove?wid=${active}`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({exchange_segment:seg,exchange_token:tok})
+  });
   load();
 }
 
@@ -73,4 +74,3 @@ function start(){
 }
 
 start();
-          
