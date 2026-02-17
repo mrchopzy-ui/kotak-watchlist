@@ -94,17 +94,13 @@ def add():
     wid = request.args.get("wid")
     data = request.json or {}
 
-    symbol = data.get("symbol")
-    exchange = data.get("exchange")
-    segment = data.get("segment")
-
-    if not all([wid, symbol, exchange, segment]):
+    if not all(k in data for k in ("symbol", "exchange", "segment")):
         return jsonify({"error": "Invalid instrument"}), 400
 
     with db() as c:
         c.execute(
             "INSERT OR IGNORE INTO stocks(wid,symbol,exchange,segment) VALUES(?,?,?,?)",
-            (wid, symbol, exchange, segment)
+            (wid, data["symbol"], data["exchange"], data["segment"])
         )
     return ("", 204)
 
@@ -126,18 +122,31 @@ def prices():
         ).fetchall()
 
     out = []
-    for sym, exch in rows:
-        r = requests.get(
-            f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{exch}|{sym}",
-            headers={"Authorization": ACCESS_TOKEN},
-        ).json()[0]
 
-        out.append({
-            "symbol": sym,
-            "company": r.get("instrumentName", sym),
-            "ltp": float(r.get("ltp", 0)),
-            "pct": float(r.get("per_change", 0)),
-        })
+    for sym, exch in rows:
+        try:
+            resp = requests.get(
+                f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{exch}|{sym}",
+                headers={"Authorization": ACCESS_TOKEN},
+                timeout=5
+            ).json()
+
+            if not isinstance(resp, list) or not resp:
+                continue
+
+            q = resp[0]
+
+            out.append({
+                "symbol": sym,
+                "company": q.get("instrumentName", sym),
+                "ltp": float(q.get("ltp", 0)),
+                "pct": float(q.get("per_change", 0)),
+            })
+
+        except Exception as e:
+            # Skip broken / expired / illiquid contracts
+            print("Quote failed:", sym, e)
+            continue
 
     return jsonify(out)
 
