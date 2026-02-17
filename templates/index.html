@@ -6,15 +6,12 @@
 </head>
 <body>
 
-<header>
-  <h1>Nexus Asset Management</h1>
-</header>
+<header><h1>Nexus Asset Management</h1></header>
 
 <div class="tabs">
   {% for w in watchlists %}
-  <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
+    <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
   {% endfor %}
-  <button id="addWatchlist">＋</button>
 </div>
 
 <div class="search">
@@ -23,18 +20,13 @@
 </div>
 
 <table>
-  <thead>
-    <tr>
-      <th>Symbol</th>
-      <th>Company Name</th>
-      <th>Price</th>
-      <th>%</th>
-      <th>Volume</th>
-      <th>O</th><th>H</th><th>L</th><th>C</th>
-      <th>Delete</th>
-    </tr>
-  </thead>
-  <tbody id="watchlist"></tbody>
+<thead>
+<tr>
+<th>Symbol</th><th>Company Name</th><th>Price</th><th>%</th>
+<th>Volume</th><th>O</th><th>H</th><th>L</th><th>C</th><th>Delete</th>
+</tr>
+</thead>
+<tbody id="watchlist"></tbody>
 </table>
 
 <script src="/static/app.js"></script>
