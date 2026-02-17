@@ -1,8 +1,7 @@
 from flask import Flask, render_template, request, jsonify
-import csv, sqlite3, os, requests, pyotp, time
+import csv, sqlite3, os, requests, pyotp
 
 app = Flask(__name__)
-
 DB = "watchlist.db"
 
 # ---------- ENV ----------
@@ -42,16 +41,24 @@ def db():
     return sqlite3.connect(DB)
 
 with db() as c:
-    c.execute("""CREATE TABLE IF NOT EXISTS watchlists(id INTEGER PRIMARY KEY, name TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS stocks(
-        wid INTEGER, symbol TEXT, exchange TEXT, segment TEXT
-    )""")
-    c.execute("INSERT OR IGNORE INTO watchlists VALUES(1,'Watchlist 1')")
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS watchlists(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS stocks(
+            wid INTEGER,
+            symbol TEXT,
+            exchange TEXT,
+            segment TEXT,
+            UNIQUE(wid, symbol, exchange)
+        )
+    """)
+    c.execute("INSERT OR IGNORE INTO watchlists(id,name) VALUES(1,'Watchlist 1')")
 
 # ---------- LOAD SCRIP MASTERS ----------
-EQ_SCRIPS = []
-FO_SCRIPS = []
-
 with open("nse_eq_scrip_master.csv", encoding="latin-1") as f:
     EQ_SCRIPS = list(csv.DictReader(f))
 
@@ -68,41 +75,39 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    results = []
+    res = []
 
     for s in EQ_SCRIPS:
-        if q in s["trading_symbol"].lower():
-            results.append({
-                "symbol": s["trading_symbol"],
-                "exchange": "nse_cm",
-                "segment": "EQ"
-            })
+        sym = s.get("trading_symbol")
+        if sym and q in sym.lower():
+            res.append({"symbol": sym, "exchange": "nse_cm", "segment": "EQ"})
 
     for s in FO_SCRIPS:
-        if q in s["trading_symbol"].lower():
-            results.append({
-                "symbol": s["trading_symbol"],
-                "exchange": "nse_fo",
-                "segment": "FO"
-            })
+        sym = s.get("trading_symbol")
+        if sym and q in sym.lower():
+            res.append({"symbol": sym, "exchange": "nse_fo", "segment": "FO"})
 
-    return jsonify(results[:20])
+    return jsonify(res[:30])
 
 @app.route("/add", methods=["POST"])
 def add():
     wid = request.args.get("wid")
-    s = request.json
+    data = request.json or {}
+
+    if not all(k in data for k in ("symbol", "exchange", "segment")):
+        return jsonify({"error": "Invalid instrument"}), 400
+
     with db() as c:
         c.execute(
-            "INSERT INTO stocks VALUES(?,?,?,?)",
-            (wid, s["symbol"], s["exchange"], s["segment"]),
+            "INSERT OR IGNORE INTO stocks(wid,symbol,exchange,segment) VALUES(?,?,?,?)",
+            (wid, data["symbol"], data["exchange"], data["segment"])
         )
     return ("", 204)
 
 @app.route("/remove", methods=["POST"])
 def remove():
     wid = request.args.get("wid")
-    sym = request.json["symbol"]
+    sym = request.json.get("symbol")
     with db() as c:
         c.execute("DELETE FROM stocks WHERE wid=? AND symbol=?", (wid, sym))
     return ("", 204)
@@ -112,39 +117,44 @@ def prices():
     wid = request.args.get("wid")
     with db() as c:
         rows = c.execute(
-            "SELECT symbol,exchange,segment FROM stocks WHERE wid=?", (wid,)
+            "SELECT symbol,exchange FROM stocks WHERE wid=?",
+            (wid,)
         ).fetchall()
 
     out = []
-    for sym, exch, seg in rows:
-        q = f"{exch}|{sym}"
-        r = requests.get(
-            f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{q}",
-            headers={"Authorization": ACCESS_TOKEN},
-        ).json()[0]
 
-        out.append({
-            "symbol": sym,
-            "company": r.get("instrumentName", sym),
-            "ltp": float(r["ltp"]),
-            "pct": float(r["per_change"]),
-        })
+    for sym, exch in rows:
+        try:
+            resp = requests.get(
+                f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{exch}|{sym}",
+                headers={"Authorization": ACCESS_TOKEN},
+                timeout=5
+            ).json()
+
+            if not isinstance(resp, list) or not resp:
+                continue
+
+            q = resp[0]
+
+            out.append({
+                "symbol": sym,
+                "company": q.get("instrumentName", sym),
+                "ltp": float(q.get("ltp", 0)),
+                "pct": float(q.get("per_change", 0)),
+            })
+
+        except Exception as e:
+            # Skip broken / expired / illiquid contracts
+            print("Quote failed:", sym, e)
+            continue
 
     return jsonify(out)
 
 @app.route("/watchlist", methods=["POST"])
 def new_watchlist():
-    name = request.json["name"]
     with db() as c:
-        c.execute("INSERT INTO watchlists(name) VALUES(?)", (name,))
-    return ("", 204)
-
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename(wid):
-    name = request.json["name"]
-    with db() as c:
-        c.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
+        c.execute("INSERT INTO watchlists(name) VALUES(?)", (request.json["name"],))
     return ("", 204)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
