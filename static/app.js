@@ -11,13 +11,14 @@ function loadPrices() {
         .then(d => {
             tbody.innerHTML = "";
             d.forEach(s => {
+                const base = s.symbol.replace(/-EQ$/, "").replace(/\d+/g, "");
                 tbody.innerHTML += `
-                <tr>
+                <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${base}','_blank')">
                     <td>${s.symbol}</td>
                     <td>${s.company}</td>
                     <td>${s.ltp.toFixed(2)}</td>
                     <td>${s.pct.toFixed(2)}%</td>
-                    <td><button onclick="removeStock('${s.symbol}')">✕</button></td>
+                    <td><button onclick="event.stopPropagation();removeStock('${s.symbol}')">✕</button></td>
                 </tr>`;
             });
         });
@@ -31,29 +32,29 @@ function removeStock(sym){
     }).then(loadPrices);
 }
 
-search.oninput = async () => {
+search.oninput = () => {
     suggestions.innerHTML = "";
     if (!search.value) return;
 
-    const res = await fetch(`/search?q=${search.value}`);
-    const data = await res.json();
-
-    data.forEach(s => {
-        const div = document.createElement("div");
-        div.className = "suggestion";
-        div.textContent = `${s.symbol} (${s.segment})`;
-        div.onclick = async () => {
-            await fetch(`/add?wid=${active}`, {
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify(s)
+    fetch(`/search?q=${search.value}`)
+        .then(r => r.json())
+        .then(d => {
+            d.forEach(s => {
+                const div = document.createElement("div");
+                div.className = "suggestion";
+                div.innerText = `${s.symbol} (${s.segment})`;
+                div.onclick = () => {
+                    fetch(`/add?wid=${active}`,{
+                        method:"POST",
+                        headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify(s)
+                    }).then(loadPrices);
+                    search.value = "";
+                    suggestions.innerHTML = "";
+                };
+                suggestions.appendChild(div);
             });
-            search.value = "";
-            suggestions.innerHTML = "";
-            loadPrices();
-        };
-        suggestions.appendChild(div);
-    });
+        });
 };
 
 document.querySelectorAll(".tab").forEach(t => {
@@ -65,15 +66,14 @@ document.querySelectorAll(".tab").forEach(t => {
     };
 });
 
-addWL.onclick = async () => {
-    const name = prompt("Watchlist name");
-    if (!name) return;
-    await fetch("/watchlist", {
+addWL.onclick = () => {
+    const n = prompt("Watchlist name");
+    if (!n) return;
+    fetch("/watchlist", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({name})
-    });
-    location.reload();
+        body:JSON.stringify({name:n})
+    }).then(() => location.reload());
 };
 
 setInterval(loadPrices, 5000);
