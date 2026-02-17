@@ -41,17 +41,21 @@ def db():
     return sqlite3.connect(DB)
 
 with db() as c:
-    c.execute("""CREATE TABLE IF NOT EXISTS watchlists(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS stocks(
-        wid INTEGER,
-        symbol TEXT,
-        exchange TEXT,
-        segment TEXT,
-        UNIQUE(wid, symbol, exchange)
-    )""")
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS watchlists(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS stocks(
+            wid INTEGER,
+            symbol TEXT,
+            exchange TEXT,
+            segment TEXT,
+            UNIQUE(wid, symbol, exchange)
+        )
+    """)
     c.execute("INSERT OR IGNORE INTO watchlists(id,name) VALUES(1,'Watchlist 1')")
 
 # ---------- LOAD SCRIP MASTERS ----------
@@ -71,49 +75,45 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    results = []
+    res = []
 
     for s in EQ_SCRIPS:
-        sym = s.get("trading_symbol", "")
-        if q in sym.lower():
-            results.append({
-                "symbol": sym,
-                "exchange": "nse_cm",
-                "segment": "EQ"
-            })
+        sym = s.get("trading_symbol")
+        if sym and q in sym.lower():
+            res.append({"symbol": sym, "exchange": "nse_cm", "segment": "EQ"})
 
     for s in FO_SCRIPS:
-        sym = s.get("trading_symbol", "")
-        if q in sym.lower():
-            results.append({
-                "symbol": sym,
-                "exchange": "nse_fo",
-                "segment": "FO"
-            })
+        sym = s.get("trading_symbol")
+        if sym and q in sym.lower():
+            res.append({"symbol": sym, "exchange": "nse_fo", "segment": "FO"})
 
-    return jsonify(results[:30])
+    return jsonify(res[:30])
 
 @app.route("/add", methods=["POST"])
 def add():
     wid = request.args.get("wid")
-    s = request.json
+    data = request.json or {}
+
+    symbol = data.get("symbol")
+    exchange = data.get("exchange")
+    segment = data.get("segment")
+
+    if not all([wid, symbol, exchange, segment]):
+        return jsonify({"error": "Invalid instrument"}), 400
 
     with db() as c:
         c.execute(
             "INSERT OR IGNORE INTO stocks(wid,symbol,exchange,segment) VALUES(?,?,?,?)",
-            (wid, s["symbol"], s["exchange"], s["segment"]),
+            (wid, symbol, exchange, segment)
         )
     return ("", 204)
 
 @app.route("/remove", methods=["POST"])
 def remove():
     wid = request.args.get("wid")
-    sym = request.json["symbol"]
+    sym = request.json.get("symbol")
     with db() as c:
-        c.execute(
-            "DELETE FROM stocks WHERE wid=? AND symbol=?",
-            (wid, sym),
-        )
+        c.execute("DELETE FROM stocks WHERE wid=? AND symbol=?", (wid, sym))
     return ("", 204)
 
 @app.route("/prices")
@@ -121,15 +121,14 @@ def prices():
     wid = request.args.get("wid")
     with db() as c:
         rows = c.execute(
-            "SELECT symbol,exchange,segment FROM stocks WHERE wid=?",
-            (wid,),
+            "SELECT symbol,exchange FROM stocks WHERE wid=?",
+            (wid,)
         ).fetchall()
 
     out = []
-    for sym, exch, seg in rows:
-        q = f"{exch}|{sym}"
+    for sym, exch in rows:
         r = requests.get(
-            f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{q}",
+            f"{BASE_URL}/script-details/1.0/quotes/neosymbol/{exch}|{sym}",
             headers={"Authorization": ACCESS_TOKEN},
         ).json()[0]
 
@@ -144,16 +143,8 @@ def prices():
 
 @app.route("/watchlist", methods=["POST"])
 def new_watchlist():
-    name = request.json["name"]
     with db() as c:
-        c.execute("INSERT INTO watchlists(name) VALUES(?)", (name,))
-    return ("", 204)
-
-@app.route("/watchlist/<int:wid>", methods=["PUT"])
-def rename(wid):
-    name = request.json["name"]
-    with db() as c:
-        c.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
+        c.execute("INSERT INTO watchlists(name) VALUES(?)", (request.json["name"],))
     return ("", 204)
 
 if __name__ == "__main__":
