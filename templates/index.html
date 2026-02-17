@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Nexus Asset Management</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <title>Nexus Asset Management</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<header><h1>Nexus Asset Management</h1></header>
+<header>
+    <h1>Nexus Asset Management</h1>
+    <input id="search" placeholder="Search EQ / Futures / Options">
+    <div id="suggestions"></div>
+</header>
 
 <div class="tabs">
-  {% for w in watchlists %}
-    <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
-  {% endfor %}
-</div>
-
-<div class="search">
-  <input id="search" placeholder="Search EQ / FUT / OPT">
-  <div id="suggestions"></div>
+    {% for t in tabs %}
+    <div class="tab" data-id="{{t[0]}}">{{t[1]}}</div>
+    {% endfor %}
+    <button id="addWatchlist">＋</button>
 </div>
 
 <table>
 <thead>
 <tr>
-<th>Symbol</th><th>Company Name</th><th>Price</th><th>%</th>
-<th>Volume</th><th>O</th><th>H</th><th>L</th><th>C</th><th>Delete</th>
+<th>Symbol</th>
+<th>Company Name</th>
+<th>Price</th>
+<th>%</th>
+<th>Delete</th>
 </tr>
 </thead>
 <tbody id="watchlist"></tbody>
