@@ -1,76 +1,77 @@
-let active=document.querySelector(".tab").dataset.id;
-let timer=null;
+const search = document.getElementById("search");
+const suggestions = document.getElementById("suggestions");
+const tbody = document.getElementById("watchlist");
+const addWL = document.getElementById("addWatchlist");
 
-document.querySelectorAll(".tab").forEach(t=>{
-  t.onclick=()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    t.classList.add("active");
-    active=t.dataset.id;
-    start();
-  }
-});
+let active = document.querySelector(".tab").dataset.id;
 
-const search=document.getElementById("search");
-const sug=document.getElementById("suggestions");
+function load() {
+    fetch(`/prices?wid=${active}`)
+        .then(r => r.json())
+        .then(d => {
+            tbody.innerHTML = "";
+            d.forEach(s => {
+                const base = s.symbol.replace(/-EQ$/, "").replace(/\d+/g,"");
+                tbody.innerHTML += `
+                <tr onclick="window.open('https://www.tradingview.com/chart/?symbol=NSE:${base}','_blank')">
+                    <td>${s.symbol}</td>
+                    <td>${s.company}</td>
+                    <td>${s.ltp.toFixed(2)}</td>
+                    <td>${s.pct.toFixed(2)}%</td>
+                    <td><button onclick="event.stopPropagation();remove('${s.symbol}')">✕</button></td>
+                </tr>`;
+            });
+        });
+}
 
-search.oninput=async()=>{
-  sug.innerHTML="";
-  if(!search.value)return;
-  const r=await fetch(`/search?q=${search.value}`);
-  const d=await r.json();
-  d.forEach(s=>{
-    const div=document.createElement("div");
-    div.innerText=s.trading_symbol;
-    div.onclick=async()=>{
-      await fetch(`/add?wid=${active}`,{
+function remove(sym){
+    fetch(`/remove?wid=${active}`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(s)
-      });
-      search.value="";
-      sug.innerHTML="";
-      load();
-    };
-    sug.appendChild(div);
-  });
+        body:JSON.stringify({symbol:sym})
+    }).then(load);
+}
+
+search.oninput = () => {
+    suggestions.innerHTML = "";
+    if(!search.value) return;
+
+    fetch(`/search?q=${search.value}`)
+        .then(r=>r.json())
+        .then(d=>{
+            d.forEach(s=>{
+                const div=document.createElement("div");
+                div.className="suggestion";
+                div.innerText = `${s.symbol} (${s.segment})`;
+                div.onclick=()=>{
+                    fetch(`/add?wid=${active}`,{
+                        method:"POST",
+                        headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify(s)
+                    }).then(load);
+                    suggestions.innerHTML="";
+                    search.value="";
+                };
+                suggestions.appendChild(div);
+            });
+        });
 };
 
-async function load(){
-  const r=await fetch(`/prices?wid=${active}`);
-  const d=await r.json();
-  const tb=document.getElementById("watchlist");
-  tb.innerHTML="";
-  d.forEach(x=>{
-    tb.innerHTML+=`
-    <tr onclick="chart('${x.symbol}')">
-      <td>${x.symbol}</td>
-      <td>${x.company}</td>
-      <td>${x.ltp.toFixed(2)}</td>
-      <td>${x.pct.toFixed(2)}%</td>
-      <td>${x.volume}</td>
-      <td>${x.open}</td><td>${x.high}</td><td>${x.low}</td><td>${x.close}</td>
-      <td><button onclick="event.stopPropagation();del('${x.exchange_segment}','${x.exchange_token}')">✕</button></td>
-    </tr>`;
-  });
-}
+document.querySelectorAll(".tab").forEach(t=>{
+    t.onclick=()=>{
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
+        active=t.dataset.id;
+        load();
+    };
+});
 
-async function del(seg,tok){
-  await fetch(`/remove?wid=${active}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({exchange_segment:seg,exchange_token:tok})
-  });
-  load();
-}
+addWL.onclick=()=>{
+    const n=prompt("Watchlist name");
+    if(!n) return;
+    fetch("/watchlist",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})})
+        .then(()=>location.reload());
+};
 
-function chart(sym){
-  window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym.replace("-EQ","")}`,"_blank");
-}
-
-function start(){
-  if(timer)clearInterval(timer);
-  load();
-  timer=setInterval(load,5000);
-}
-
-start();
+setInterval(load,5000);
+load();
