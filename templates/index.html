@@ -21,28 +21,45 @@
     <button class="inst" data-type="FO">F&O</button>
 </div>
 
+<!-- STOCK SEARCH -->
 <div id="eqBox">
-    <input id="search" placeholder="Search stock">
-    <div id="suggestions"></div>
+    <input id="searchEQ" placeholder="Search stock">
+    <div id="suggestEQ" class="suggestions"></div>
 </div>
 
+<!-- INDEX SEARCH -->
 <div id="indexBox" class="hidden">
-    <button onclick="addIndex('Nifty 50')">NIFTY 50</button>
-    <button onclick="addIndex('Nifty Bank')">BANK NIFTY</button>
+    <input id="searchIndex" placeholder="Search index (NIFTY, BANK)">
+    <div id="suggestIndex" class="suggestions"></div>
 </div>
 
+<!-- F&O SEARCH -->
 <div id="foBox" class="hidden">
-    <select id="foUnderlying"></select>
-    <select id="foExpiry"></select>
+    <input id="searchFO" placeholder="Search underlying (RELIANCE / NIFTY)">
+    <div id="suggestFO" class="suggestions"></div>
+
     <select id="foType">
         <option value="FUT">FUT</option>
         <option value="OPT">OPT</option>
     </select>
-    <select id="foStrike" class="hidden"></select>
-    <select id="foCP" class="hidden">
-        <option value="CE">CE</option>
-        <option value="PE">PE</option>
+
+    <select id="foExpiry">
+        <option>FEB</option>
+        <option>MAR</option>
+        <option>APR</option>
     </select>
+
+    <select id="foStrike" class="hidden">
+        <option>22000</option>
+        <option>22500</option>
+        <option>23000</option>
+    </select>
+
+    <select id="foCP" class="hidden">
+        <option>CE</option>
+        <option>PE</option>
+    </select>
+
     <button onclick="addFO()">Add</button>
 </div>
 
