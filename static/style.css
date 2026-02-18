@@ -1,84 +1,74 @@
 body {
-    background: #f9fafb;
-    color: #111827;
-    font-family: system-ui, sans-serif;
     margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
 }
 
-.topbar {
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.search-wrapper {
-    position: relative; /* 🔑 FIX */
-}
-
-input {
-    padding: 10px;
-    width: 320px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-}
-
-#suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-top: none;
-    max-height: 260px;
-    overflow-y: auto;
-    z-index: 100;
-}
-
-.suggestion {
-    padding: 8px 10px;
-    cursor: pointer;
-}
-
-.suggestion:hover {
-    background: #f3f4f6;
+.top-bar {
+    background: #0b1c2d;
+    color: white;
+    padding: 15px 30px;
 }
 
 .tabs {
-    display: flex;
-    gap: 8px;
-    padding: 10px 24px;
+    background: white;
+    padding: 10px 30px;
 }
 
 .tab {
     padding: 6px 14px;
-    background: #e5e7eb;
-    border-radius: 4px;
+    margin-right: 6px;
+    border-radius: 6px;
+    border: none;
+    background: #e9ecf1;
     cursor: pointer;
 }
 
 .tab.active {
-    background: #2563eb;
+    background: #0b1c2d;
     color: white;
 }
 
-table {
+.tab.add {
+    font-weight: bold;
+}
+
+.search-box {
+    margin: 20px 30px;
+    position: relative;
+    width: 300px;
+}
+
+#search {
     width: 100%;
-    border-collapse: collapse;
+    padding: 10px;
+}
+
+#suggestions {
+    position: absolute;
     background: white;
+    width: 100%;
+    border: 1px solid #ccc;
+    z-index: 10;
+}
+
+.suggestion-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background: #eef2f7;
+}
+
+table {
+    margin: 0 30px 30px;
+    width: calc(100% - 60px);
+    background: white;
+    border-collapse: collapse;
 }
 
 th, td {
     padding: 10px;
     text-align: center;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-button {
-    background: none;
-    border: none;
-    color: red;
-    cursor: pointer;
 }
