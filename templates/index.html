@@ -6,38 +6,62 @@
 </head>
 <body>
 
-<header class="top-bar">
-    <h1>Nexus Asset Management</h1>
-</header>
+<h1>Nexus Asset Management</h1>
 
 <div class="tabs">
     {% for w in watchlists %}
-        <button class="tab" data-id="{{ w[0] }}">{{ w[1] }}</button>
+    <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
     {% endfor %}
-    <button class="tab add" id="addWatchlist">+</button>
+    <button id="addWatchlist">＋</button>
 </div>
 
-<div class="search-box">
-    <input id="search" placeholder="Type stock symbol">
+<div class="instrument-tabs">
+    <button class="inst active" data-type="EQ">Stocks</button>
+    <button class="inst" data-type="INDEX">Index</button>
+    <button class="inst" data-type="FO">F&O</button>
+</div>
+
+<div id="eqBox">
+    <input id="search" placeholder="Search stock">
     <div id="suggestions"></div>
 </div>
 
+<div id="indexBox" class="hidden">
+    <button onclick="addIndex('Nifty 50')">NIFTY 50</button>
+    <button onclick="addIndex('Nifty Bank')">BANK NIFTY</button>
+</div>
+
+<div id="foBox" class="hidden">
+    <select id="foUnderlying"></select>
+    <select id="foExpiry"></select>
+    <select id="foType">
+        <option value="FUT">FUT</option>
+        <option value="OPT">OPT</option>
+    </select>
+    <select id="foStrike" class="hidden"></select>
+    <select id="foCP" class="hidden">
+        <option value="CE">CE</option>
+        <option value="PE">PE</option>
+    </select>
+    <button onclick="addFO()">Add</button>
+</div>
+
 <table>
-    <thead>
-        <tr>
-            <th>Symbol</th>
-            <th>Company Name</th>
-            <th>LTP</th>
-            <th>%</th>
-            <th>Volume</th>
-            <th>Open</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Close</th>
-            <th>Delete</th>
-        </tr>
-    </thead>
-    <tbody id="watchlist"></tbody>
+<thead>
+<tr>
+    <th>Symbol</th>
+    <th>Company Name</th>
+    <th>Price</th>
+    <th>%</th>
+    <th>Volume</th>
+    <th>O</th>
+    <th>H</th>
+    <th>L</th>
+    <th>C</th>
+    <th></th>
+</tr>
+</thead>
+<tbody id="watchlist"></tbody>
 </table>
 
 <script src="/static/app.js"></script>
