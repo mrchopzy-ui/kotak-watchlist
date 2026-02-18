@@ -1,37 +1,8 @@
-body{
-    font-family:Arial;
-    margin:20px;
-}
-h1{
-    margin-bottom:10px;
-}
-.tabs,.instrument-tabs{
-    display:flex;
-    gap:6px;
-    margin-bottom:10px;
-}
-.tab,.inst,button{
-    padding:6px 10px;
-    cursor:pointer;
-}
-.active{
-    background:#000;
-    color:#fff;
-}
-.hidden{
-    display:none;
-}
-#suggestions div{
-    border:1px solid #ccc;
-    padding:4px;
-    cursor:pointer;
-}
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-th,td{
-    border:1px solid #ccc;
-    padding:6px;
-    text-align:center;
-}
+body{font-family:Arial;margin:20px}
+.tabs,.instrument-tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab,.inst,button{padding:6px 10px;cursor:pointer}
+.active{background:#000;color:#fff}
+.hidden{display:none}
+.suggestions div{border:1px solid #ccc;padding:5px;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
