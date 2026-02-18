@@ -22,20 +22,49 @@ h1 { margin: 0; font-size: 1.5rem; }
 .subtitle { color: #888; font-weight: 300; }
 .status-indicator { color: var(--green); font-size: 0.8rem; }
 
-/* Search */
-.search-box { position: relative; margin-bottom: 20px; }
+/* Search Box - Critical for Dropdown */
+.search-box { 
+    position: relative; /* Anchor for absolute dropdown */
+    margin-bottom: 20px; 
+    z-index: 1001; /* Above table */
+}
+
 input { 
-    width: 100%; padding: 12px; background: var(--card); border: 1px solid #333; 
-    color: white; border-radius: 4px; font-size: 1rem;
+    width: 100%; 
+    padding: 12px; 
+    background: var(--card); 
+    border: 1px solid #333; 
+    color: white; 
+    border-radius: 4px; 
+    font-size: 1rem;
+    box-sizing: border-box; /* Fix padding width issue */
 }
+
+/* Dropdown - Fixed Z-Index */
 .dropdown {
-    position: absolute; width: 100%; background: #252525; z-index: 100;
-    max-height: 200px; overflow-y: auto; border: 1px solid #333; display: none;
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    width: 100%; 
+    background: #252525; 
+    z-index: 9999; /* Super high to float over everything */
+    max-height: 200px; 
+    overflow-y: auto; 
+    border: 1px solid #444; 
+    display: none; /* Hidden by default */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
-.dropdown-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #333; }
-.dropdown-item:hover { background: #333; }
+
+.dropdown-item { 
+    padding: 12px; 
+    cursor: pointer; 
+    border-bottom: 1px solid #333; 
+    color: #fff;
+}
+.dropdown-item:hover { background: #007bff; color: white; }
 
 /* Table */
+.table-container { z-index: 1; position: relative; }
 table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
 th { text-align: left; padding: 12px; background: #252525; color: #888; font-size: 0.9rem; }
 td { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; }
@@ -43,5 +72,5 @@ tr:hover { background: #2a2a2a; }
 
 .up { color: var(--green); }
 .down { color: var(--red); }
-.del-btn { color: #888; cursor: pointer; padding: 5px; }
+.del-btn { color: #666; cursor: pointer; padding: 5px; font-weight: bold; }
 .del-btn:hover { color: var(--red); }
