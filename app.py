@@ -1,208 +1,158 @@
-import os, time, sqlite3, requests, pyotp, csv
-from flask import Flask, render_template, request, jsonify
-from collections import defaultdict
+import os
+import csv
+import sqlite3
+import requests
+from flask import Flask, render_template, jsonify, request
 
-# ================= CONFIG =================
+DB_PATH = "data.db"
 ACCESS_TOKEN = os.environ.get("KOTAK_ACCESS_TOKEN")
-MOBILE = os.environ.get("KOTAK_MOBILE")
-USER_ID = os.environ.get("KOTAK_USER_ID")
-MPIN = os.environ.get("KOTAK_MPIN")
-TOTP_SECRET = os.environ.get("KOTAK_TOTP_SECRET")
 
-DB_FILE = "watchlists.db"
 app = Flask(__name__)
 
-# ================= DB =================
+# -------------------- DB --------------------
 def db():
-    return sqlite3.connect(DB_FILE, check_same_thread=False)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def init_db():
-    c = db().cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS watchlists(id INTEGER PRIMARY KEY, name TEXT)")
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS items(
-            id INTEGER PRIMARY KEY,
-            watchlist_id INTEGER,
-            symbol TEXT,
-            exchange TEXT,
-            instrument_type TEXT,
-            expiry TEXT,
-            strike REAL,
-            option_type TEXT
-        )
-    """)
-    db().commit()
+    c = db()
+    cur = c.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS watchlists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        type TEXT
+    )""")
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        watchlist_id INTEGER,
+        symbol TEXT,
+        exch TEXT,
+        token TEXT
+    )""")
+
+    c.commit()
+    c.close()
 
 init_db()
 
-# ================= LOGIN =================
-SESSION = {}
+# -------------------- SCRIP MASTER (FO only) --------------------
+FO_CONTRACTS = []
 
-def login():
-    if SESSION.get("exp", 0) > time.time():
+def load_fo_master():
+    global FO_CONTRACTS
+    if FO_CONTRACTS:
         return
 
-    totp = pyotp.TOTP(TOTP_SECRET).now()
+    with open("nse_fo_scrip_master.csv", encoding="latin-1") as f:
+        for r in csv.DictReader(f):
+            FO_CONTRACTS.append(r)
 
-    r1 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
-        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
-    ).json()
+load_fo_master()
 
-    r2 = requests.post(
-        "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi",
-            "sid": r1["data"]["sid"],
-            "Auth": r1["data"]["token"]
-        },
-        json={"mpin": MPIN}
-    ).json()
+# -------------------- HELPERS --------------------
+def kotak_quotes(queries):
+    url = f"https://mis.kotaksecurities.com/script-details/1.0/quotes/neosymbol/{','.join(queries)}/all"
+    r = requests.get(url, headers={"Authorization": ACCESS_TOKEN})
+    return r.json()
 
-    SESSION.update({
-        "base": r2["data"]["baseUrl"],
-        "exp": time.time() + 300
-    })
+def volume_fmt(v):
+    v = float(v)
+    if v >= 1e9: return f"{v/1e9:.2f}B"
+    if v >= 1e6: return f"{v/1e6:.2f}M"
+    if v >= 1e3: return f"{v/1e3:.2f}K"
+    return str(int(v))
 
-# ================= EQ SEARCH (RESTORED) =================
-SCRIPS = []
+# -------------------- ROUTES --------------------
+@app.route("/")
+def index():
+    c = db()
+    wl = c.execute("SELECT * FROM watchlists").fetchall()
+    c.close()
+    return render_template("index.html", watchlists=wl)
 
-def load_eq_scrips():
-    global SCRIPS
-    try:
-        with open("nse_eq_scrip_master.csv", encoding="latin-1") as f:
-            SCRIPS = list(csv.DictReader(f))
-    except:
-        SCRIPS = []
+@app.route("/watchlist", methods=["POST"])
+def create_watchlist():
+    data = request.json
+    c = db()
+    c.execute("INSERT INTO watchlists (name,type) VALUES (?,?)",
+              (data["name"], data["type"]))
+    c.commit()
+    c.close()
+    return "", 204
 
-load_eq_scrips()
+@app.route("/watchlist/<int:i>", methods=["PUT"])
+def rename_watchlist(i):
+    c = db()
+    c.execute("UPDATE watchlists SET name=? WHERE id=?",
+              (request.json["name"], i))
+    c.commit()
+    c.close()
+    return "", 204
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").lower()
-    res = [
-        {"trading_symbol": r["trading_symbol"]}
-        for r in SCRIPS
-        if q in r["trading_symbol"].lower()
-    ][:20]
+    q = request.args.get("q","").upper()
+    res = []
+    for r in FO_CONTRACTS:
+        if r["pTrdSymbol"].startswith(q):
+            res.append({
+                "symbol": r["pTrdSymbol"],
+                "token": r["pSymbol"],
+                "exch": r["pExchSeg"]
+            })
+            if len(res) > 20: break
     return jsonify(res)
 
-# ================= F&O MASTER =================
-FO = defaultdict(lambda: {
-    "expiries": set(),
-    "options": defaultdict(set)
-})
+@app.route("/add", methods=["POST"])
+def add_item():
+    d = request.json
+    c = db()
+    c.execute("INSERT INTO items (watchlist_id,symbol,exch,token) VALUES (?,?,?,?)",
+              (d["wid"], d["symbol"], d["exch"], d["token"]))
+    c.commit()
+    c.close()
+    return "", 204
 
-def load_fo():
-    try:
-        login()
-        p = requests.get(
-            f"{SESSION['base']}/script-details/1.0/masterscrip/file-paths",
-            headers={"Authorization": ACCESS_TOKEN}
-        ).json()
-
-        url = [x for x in p["data"]["filesPaths"] if "nse_fo" in x][0]
-        rows = csv.DictReader(requests.get(url).text.splitlines())
-
-        for r in rows:
-            u = r.get("underlying")
-            e = r.get("expiryDate")
-            o = r.get("optionType")
-            s = r.get("strikePrice")
-
-            if not u or not e:
-                continue
-
-            FO[u]["expiries"].add(e)
-            if o in ("CE", "PE"):
-                FO[u]["options"][e].add(float(s))
-
-    except Exception as e:
-        print("FO load failed:", e)
-
-load_fo()
-
-@app.route("/fo/underlyings")
-def fo_underlyings():
-    return jsonify(sorted(FO.keys()))
-
-@app.route("/fo/expiries")
-def fo_expiries():
-    return jsonify(sorted(FO.get(request.args["u"], {}).get("expiries", [])))
-
-@app.route("/fo/strikes")
-def fo_strikes():
-    return jsonify(sorted(
-        FO.get(request.args["u"], {}).get("options", {}).get(request.args["e"], [])
-    ))
-
-# ================= QUOTES =================
-def quotes(rows):
-    login()
-    if not rows:
-        return []
-    syms = ",".join(f"{r['exchange']}|{r['symbol']}" for r in rows)
-    r = requests.get(
-        f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{syms}/all",
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
-
-    out = []
-    for q in r:
-        out.append({
-            "symbol": q.get("display_symbol"),
-            "company": q.get("instrument_name") or q.get("display_symbol"),
-            "ltp": float(q.get("ltp", 0)),
-            "pct": float(q.get("per_change", 0)),
-            "volume": q.get("last_volume", 0),
-            "open": q.get("ohlc", {}).get("open", 0),
-            "high": q.get("ohlc", {}).get("high", 0),
-            "low": q.get("ohlc", {}).get("low", 0),
-            "close": q.get("ohlc", {}).get("close", 0),
-        })
-    return out
-
-# ================= ROUTES =================
-@app.route("/")
-def home():
-    w = db().execute("SELECT id,name FROM watchlists").fetchall()
-    if not w:
-        db().execute("INSERT INTO watchlists(name) VALUES('Watchlist 1')")
-        db().commit()
-        w = db().execute("SELECT id,name FROM watchlists").fetchall()
-    return render_template("index.html", watchlists=w)
+@app.route("/remove", methods=["POST"])
+def remove_item():
+    d = request.json
+    c = db()
+    c.execute("DELETE FROM items WHERE watchlist_id=? AND symbol=?",
+              (d["wid"], d["symbol"]))
+    c.commit()
+    c.close()
+    return "", 204
 
 @app.route("/prices")
 def prices():
-    rows = db().execute(
-        "SELECT symbol,exchange,instrument_type,expiry,strike,option_type FROM items WHERE watchlist_id=?",
-        (request.args["wid"],)
-    ).fetchall()
+    wid = request.args.get("wid")
+    c = db()
+    rows = c.execute("SELECT symbol,exch FROM items WHERE watchlist_id=?", (wid,)).fetchall()
+    c.close()
 
-    data = [{"symbol":r[0],"exchange":r[1]} for r in rows]
-    return jsonify(quotes(data))
+    if not rows:
+        return jsonify([])
 
-@app.route("/add", methods=["POST"])
-def add():
-    d = request.json
-    db().execute(
-        "INSERT INTO items(watchlist_id,symbol,exchange,instrument_type,expiry,strike,option_type) VALUES (?,?,?,?,?,?,?)",
-        (request.args["wid"], d["symbol"], d["exchange"], d["instrument_type"], d.get("expiry"), d.get("strike"), d.get("option_type"))
-    )
-    db().commit()
-    return "",204
+    queries = [f"{r[1]}|{r[0]}" for r in rows]
+    q = kotak_quotes(queries)
 
-@app.route("/remove", methods=["POST"])
-def remove():
-    db().execute(
-        "DELETE FROM items WHERE watchlist_id=? AND symbol=?",
-        (request.args["wid"], request.json["trading_symbol"])
-    )
-    db().commit()
-    return "",204
+    out = []
+    for r in q:
+        out.append({
+            "symbol": r["display_symbol"],
+            "company": r.get("instrument_name",""),
+            "ltp": float(r["ltp"]),
+            "pct": float(r["per_change"]),
+            "volume": volume_fmt(r.get("last_volume",0)),
+            "open": r["ohlc"]["open"],
+            "high": r["ohlc"]["high"],
+            "low": r["ohlc"]["low"],
+            "close": r["ohlc"]["close"]
+        })
+    return jsonify(out)
 
-# ================= RUN =================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(debug=True)
