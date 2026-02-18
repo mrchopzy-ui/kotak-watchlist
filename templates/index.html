@@ -6,73 +6,33 @@
 </head>
 <body>
 
-<h1>Nexus Asset Management</h1>
+<header>
+    <h1>Nexus Asset Management</h1>
+    <button id="newWL">+ Watchlist</button>
+</header>
 
 <div class="tabs">
-    {% for w in watchlists %}
-    <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
-    {% endfor %}
-    <button id="addWatchlist">＋</button>
+{% for w in watchlists %}
+    <div class="tab" data-id="{{w[0]}}" data-type="{{w[2]}}">{{w[1]}}</div>
+{% endfor %}
 </div>
 
-<div class="instrument-tabs">
-    <button class="inst active" data-type="EQ">Stocks</button>
-    <button class="inst" data-type="INDEX">Index</button>
-    <button class="inst" data-type="FO">F&O</button>
-</div>
-
-<!-- ================= STOCK ================= -->
-<div id="eqBox">
-    <input id="searchEQ" placeholder="Search stock">
-    <div id="suggestEQ" class="suggestions"></div>
-</div>
-
-<!-- ================= INDEX ================= -->
-<div id="indexBox" class="hidden">
-    <input id="searchIndex" placeholder="Search index">
-    <div id="suggestIndex" class="suggestions"></div>
-</div>
-
-<!-- ================= F&O ================= -->
-<div id="foBox" class="hidden">
-    <input id="searchFO" placeholder="Search underlying (RELIANCE / NIFTY)">
-    <div id="suggestFO" class="suggestions"></div>
-
-    <div class="fo-row">
-        <select id="foExpiry"></select>
-
-        <select id="foType">
-            <option value="FUT">FUT</option>
-            <option value="OPT">OPT</option>
-        </select>
-
-        <select id="foStrike" class="hidden"></select>
-
-        <select id="foCP" class="hidden">
-            <option value="CE">CE</option>
-            <option value="PE">PE</option>
-        </select>
-
-        <button id="addFO">Add</button>
-    </div>
-</div>
+<input id="search" placeholder="Type symbol…" autocomplete="off">
+<div id="suggestions"></div>
 
 <table>
 <thead>
 <tr>
-    <th>Symbol</th>
-    <th>Company Name</th>
-    <th>Price</th>
-    <th>%</th>
-    <th>Volume</th>
-    <th>O</th>
-    <th>H</th>
-    <th>L</th>
-    <th>C</th>
-    <th></th>
+<th>Symbol</th>
+<th>Company Name</th>
+<th>Price</th>
+<th>%</th>
+<th>Volume</th>
+<th>O</th><th>H</th><th>L</th><th>C</th>
+<th>Del</th>
 </tr>
 </thead>
-<tbody id="watchlist"></tbody>
+<tbody id="rows"></tbody>
 </table>
 
 <script src="/static/app.js"></script>
