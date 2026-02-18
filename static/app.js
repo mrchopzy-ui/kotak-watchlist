@@ -1,10 +1,11 @@
 let activeWatchlist;
 let timer;
 let mode = "EQ";
+let selectedFO = null;
 
-document.querySelectorAll(".tab").forEach(t=>{
-    t.onclick=()=>{
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+document.querySelectorAll(".tab").forEach(t => {
+    t.onclick = () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
         t.classList.add("active");
         activeWatchlist = t.dataset.id;
         refresh();
@@ -12,49 +13,64 @@ document.querySelectorAll(".tab").forEach(t=>{
 });
 document.querySelector(".tab").click();
 
-document.querySelectorAll(".inst").forEach(b=>{
-    b.onclick=()=>{
-        document.querySelectorAll(".inst").forEach(x=>x.classList.remove("active"));
+document.querySelectorAll(".inst").forEach(b => {
+    b.onclick = () => {
+        document.querySelectorAll(".inst").forEach(x => x.classList.remove("active"));
         b.classList.add("active");
-        mode=b.dataset.type;
-        toggleBoxes();
+        mode = b.dataset.type;
+        toggle();
     };
 });
 
-function toggleBoxes(){
-    ["eqBox","indexBox","foBox"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+function toggle(){
+    eqBox.classList.add("hidden");
+    indexBox.classList.add("hidden");
+    foBox.classList.add("hidden");
     if(mode==="EQ") eqBox.classList.remove("hidden");
     if(mode==="INDEX") indexBox.classList.remove("hidden");
     if(mode==="FO") foBox.classList.remove("hidden");
 }
 
-search.oninput = async ()=>{
-    if(!search.value) return suggestions.innerHTML="";
-    let r = await fetch("/search?q="+search.value);
+/* -------- STOCK SEARCH -------- */
+searchEQ.oninput = async () => {
+    if(!searchEQ.value) return suggestEQ.innerHTML="";
+    let r = await fetch(`/search?q=${searchEQ.value}`);
     let d = await r.json();
-    suggestions.innerHTML="";
+    suggestEQ.innerHTML="";
     d.forEach(s=>{
         let div=document.createElement("div");
         div.textContent=s.trading_symbol;
-        div.onclick=()=>addStock(s);
-        suggestions.appendChild(div);
+        div.onclick=()=>addEQ(s.trading_symbol);
+        suggestEQ.appendChild(div);
     });
 };
 
-async function addStock(s){
+async function addEQ(sym){
     await fetch(`/add?wid=${activeWatchlist}`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-            symbol:s.trading_symbol,
+            symbol:sym,
             exchange:"nse_cm",
             instrument_type:"EQ"
         })
     });
-    search.value="";
-    suggestions.innerHTML="";
+    searchEQ.value="";
+    suggestEQ.innerHTML="";
     refresh();
 }
+
+/* -------- INDEX SEARCH -------- */
+searchIndex.oninput = ()=>{
+    let q = searchIndex.value.toLowerCase();
+    suggestIndex.innerHTML="";
+    ["Nifty 50","Nifty Bank"].filter(x=>x.toLowerCase().includes(q)).forEach(i=>{
+        let d=document.createElement("div");
+        d.textContent=i;
+        d.onclick=()=>addIndex(i);
+        suggestIndex.appendChild(d);
+    });
+};
 
 function addIndex(name){
     fetch(`/add?wid=${activeWatchlist}`,{
@@ -68,26 +84,41 @@ function addIndex(name){
     }).then(refresh);
 }
 
+/* -------- F&O SEARCH -------- */
+searchFO.oninput = async ()=>{
+    if(!searchFO.value) return suggestFO.innerHTML="";
+    let r = await fetch(`/search?q=${searchFO.value}`);
+    let d = await r.json();
+    suggestFO.innerHTML="";
+    d.forEach(s=>{
+        let div=document.createElement("div");
+        div.textContent=s.trading_symbol;
+        div.onclick=()=>{ selectedFO=s.trading_symbol; suggestFO.innerHTML=""; searchFO.value=s.trading_symbol; };
+        suggestFO.appendChild(div);
+    });
+};
+
+foType.onchange = ()=>{
+    foStrike.classList.toggle("hidden", foType.value==="FUT");
+    foCP.classList.toggle("hidden", foType.value==="FUT");
+};
+
 async function addFO(){
-    let u=foUnderlying.value;
-    let e=foExpiry.value;
-    let t=foType.value;
-    let s=u+e+(t==="FUT"?"FUT":foStrike.value+foCP.value);
+    if(!selectedFO) return alert("Select underlying first");
+    let sym = selectedFO + foExpiry.value + (foType.value==="FUT"?"FUT":foStrike.value+foCP.value);
     await fetch(`/add?wid=${activeWatchlist}`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-            symbol:s,
+            symbol:sym,
             exchange:"nse_fo",
-            instrument_type:t,
-            expiry:e,
-            strike:t==="OPT"?foStrike.value:null,
-            option_type:t==="OPT"?foCP.value:null
+            instrument_type:foType.value
         })
     });
     refresh();
 }
 
+/* -------- WATCHLIST -------- */
 async function refresh(){
     if(timer) clearInterval(timer);
     await load();
@@ -110,12 +141,12 @@ async function load(){
             <td>${x.high}</td>
             <td>${x.low}</td>
             <td>${x.close}</td>
-            <td><button onclick="event.stopPropagation();remove('${x.symbol}')">✕</button></td>
+            <td><button onclick="event.stopPropagation();removeItem('${x.symbol}')">✕</button></td>
         </tr>`;
     });
 }
 
-function remove(sym){
+function removeItem(sym){
     fetch(`/remove?wid=${activeWatchlist}`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
