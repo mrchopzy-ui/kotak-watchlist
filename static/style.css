@@ -1,46 +1,10 @@
-body { font-family: Arial; margin: 20px; }
-h1 { margin-bottom: 10px; }
-
-.tabs, .instrument-tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-.tab, .inst, button {
-    padding: 6px 10px;
-    cursor: pointer;
-}
-
-.active {
-    background: #000;
-    color: #fff;
-}
-
-.hidden {
-    display: none;
-}
-
-.suggestions div {
-    border: 1px solid #ccc;
-    padding: 5px;
-    cursor: pointer;
-}
-
-.fo-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-}
-
-th, td {
-    border: 1px solid #ccc;
-    padding: 6px;
-    text-align: center;
-}
+body{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0}
+header{display:flex;justify-content:space-between;padding:12px 20px;background:#020617}
+.tabs{display:flex;border-bottom:1px solid #334155}
+.tab{padding:8px 16px;cursor:pointer}
+.tab.active{background:#1e293b}
+#search{margin:12px;width:300px;padding:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px;border-bottom:1px solid #1e293b;text-align:center}
+tr:hover{background:#1e293b;cursor:pointer}
+button{background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer}
