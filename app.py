@@ -1,14 +1,16 @@
 import os
+import time
 import json
 import sqlite3
 import requests
 import pyotp
-import time
+import csv
+from collections import defaultdict
 from flask import Flask, render_template, request, jsonify
 
-# =========================
-# CONFIG (ENV VARIABLES)
-# =========================
+# ======================================================
+# CONFIG (ENV VARIABLES – REQUIRED ON RENDER)
+# ======================================================
 ACCESS_TOKEN = os.environ.get("KOTAK_ACCESS_TOKEN")
 MOBILE = os.environ.get("KOTAK_MOBILE")
 USER_ID = os.environ.get("KOTAK_USER_ID")
@@ -16,12 +18,11 @@ MPIN = os.environ.get("KOTAK_MPIN")
 TOTP_SECRET = os.environ.get("KOTAK_TOTP_SECRET")
 
 DB_FILE = "watchlists.db"
-
 app = Flask(__name__)
 
-# =========================
+# ======================================================
 # DATABASE
-# =========================
+# ======================================================
 def get_db():
     return sqlite3.connect(DB_FILE, check_same_thread=False)
 
@@ -53,9 +54,9 @@ def init_db():
 
 init_db()
 
-# =========================
-# LOGIN + SESSION
-# =========================
+# ======================================================
+# KOTAK SESSION
+# ======================================================
 SESSION = {}
 
 def kotak_login():
@@ -67,15 +68,8 @@ def kotak_login():
 
     r1 = requests.post(
         "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
-        headers={
-            "Authorization": ACCESS_TOKEN,
-            "neo-fin-key": "neotradeapi"
-        },
-        json={
-            "mobileNumber": MOBILE,
-            "ucc": USER_ID,
-            "totp": totp
-        }
+        headers={"Authorization": ACCESS_TOKEN, "neo-fin-key": "neotradeapi"},
+        json={"mobileNumber": MOBILE, "ucc": USER_ID, "totp": totp}
     ).json()
 
     r2 = requests.post(
@@ -96,24 +90,18 @@ def kotak_login():
         "expires": time.time() + 300
     }
 
-# =========================
+# ======================================================
 # QUOTES
-# =========================
+# ======================================================
 def get_quotes(rows):
     kotak_login()
-
-    symbols = []
-    for r in rows:
-        symbols.append(f"{r['exchange']}|{r['symbol']}")
-
-    if not symbols:
+    if not rows:
         return []
 
-    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/" + ",".join(symbols) + "/all"
-    resp = requests.get(
-        url,
-        headers={"Authorization": ACCESS_TOKEN}
-    ).json()
+    syms = [f"{r['exchange']}|{r['symbol']}" for r in rows]
+
+    url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/" + ",".join(syms) + "/all"
+    resp = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
     out = []
     for q in resp:
@@ -128,12 +116,74 @@ def get_quotes(rows):
             "low": q.get("ohlc", {}).get("low", "0"),
             "close": q.get("ohlc", {}).get("close", "0"),
         })
-
     return out
 
-# =========================
-# ROUTES
-# =========================
+# ======================================================
+# F&O SCRIP MASTER (RUNTIME, NSE_FO)
+# ======================================================
+FO_DATA = defaultdict(lambda: {
+    "expiries": set(),
+    "futures": set(),
+    "options": defaultdict(set)
+})
+
+def load_fo_scrip_master():
+    try:
+        kotak_login()
+        path = requests.get(
+            f"{SESSION['base']}/script-details/1.0/masterscrip/file-paths",
+            headers={"Authorization": ACCESS_TOKEN}
+        ).json()
+
+        csv_url = [x for x in path["data"]["filesPaths"] if "nse_fo" in x][0]
+        raw = requests.get(csv_url).text.splitlines()
+        rows = csv.DictReader(raw)
+
+        for r in rows:
+            sym = r.get("pSymbol", "")
+            und = r.get("underlying", "")
+            exp = r.get("expiryDate", "")
+            opt = r.get("optionType", "")
+            strike = r.get("strikePrice", "")
+
+            if not und or not exp:
+                continue
+
+            FO_DATA[und]["expiries"].add(exp)
+
+            if opt == "XX":
+                FO_DATA[und]["futures"].add(exp)
+            elif opt in ("CE", "PE"):
+                FO_DATA[und]["options"][exp].add(float(strike))
+
+        print("✅ F&O scrip master loaded")
+
+    except Exception as e:
+        print("⚠️ F&O scrip master failed:", e)
+
+load_fo_scrip_master()
+
+# ======================================================
+# F&O APIs (NEW)
+# ======================================================
+@app.route("/fo/underlyings")
+def fo_underlyings():
+    return jsonify(sorted(FO_DATA.keys()))
+
+@app.route("/fo/expiries")
+def fo_expiries():
+    u = request.args.get("u")
+    return jsonify(sorted(FO_DATA.get(u, {}).get("expiries", [])))
+
+@app.route("/fo/strikes")
+def fo_strikes():
+    u = request.args.get("u")
+    e = request.args.get("e")
+    return jsonify(sorted(FO_DATA.get(u, {}).get("options", {}).get(e, [])))
+
+# ======================================================
+# ROUTES (EXISTING)
+# ======================================================
 @app.route("/")
 def index():
     db = get_db()
@@ -168,8 +218,8 @@ def prices():
 def add_item():
     wid = request.args.get("wid")
     d = request.json
-
     db = get_db()
+
     db.execute("""
         INSERT INTO items
         (watchlist_id, symbol, exchange, instrument_type, expiry, strike, option_type)
@@ -190,35 +240,29 @@ def add_item():
 def remove_item():
     wid = request.args.get("wid")
     sym = request.json["trading_symbol"]
-
     db = get_db()
-    db.execute(
-        "DELETE FROM items WHERE watchlist_id=? AND symbol=?",
-        (wid, sym)
-    )
+    db.execute("DELETE FROM items WHERE watchlist_id=? AND symbol=?", (wid, sym))
     db.commit()
     return "", 204
 
 @app.route("/watchlist", methods=["POST"])
 def add_watchlist():
-    name = request.json["name"]
     db = get_db()
-    db.execute("INSERT INTO watchlists (name) VALUES (?)", (name,))
+    db.execute("INSERT INTO watchlists (name) VALUES (?)", (request.json["name"],))
     db.commit()
     return "", 204
 
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
-    name = request.json["name"]
     db = get_db()
-    db.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
+    db.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
     db.commit()
     return "", 204
 
-# =========================
-# ENTRY
-# =========================
+# ======================================================
+# ENTRY (RENDER SAFE)
+# ======================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
+    
