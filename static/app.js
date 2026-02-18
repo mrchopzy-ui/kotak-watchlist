@@ -62,17 +62,21 @@ async function addEQ(sym) {
     refresh();
 }
 
-/* ================= INDEX SEARCH ================= */
-searchIndex.oninput = () => {
-    let q = searchIndex.value.toLowerCase();
-    suggestIndex.innerHTML = "";
-    ["Nifty 50", "Nifty Bank"].filter(i => i.toLowerCase().includes(q)).forEach(i => {
-        let d = document.createElement("div");
-        d.textContent = i;
-        d.onclick = () => addIndex(i);
-        suggestIndex.appendChild(d);
-    });
+// INDEX SEARCH
+searchIndex.oninput = async () => {
+    if (!searchIndex.value) return suggestIndex.innerHTML="";
+    let r = await fetch("/fo/underlyings");
+    let d = await r.json();
+    suggestIndex.innerHTML="";
+    d.filter(u => u.toLowerCase().includes(searchIndex.value.toLowerCase()))
+     .forEach(u=>{
+        let div=document.createElement("div");
+        div.textContent=u;
+        div.onclick=()=>addIndex(u);
+        suggestIndex.appendChild(div);
+     });
 };
+
 
 function addIndex(name) {
     fetch(`/add?wid=${activeWatchlist}`, {
