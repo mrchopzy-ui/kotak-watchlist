@@ -1,10 +1,47 @@
-body{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0}
-header{display:flex;justify-content:space-between;padding:12px 20px;background:#020617}
-.tabs{display:flex;border-bottom:1px solid #334155}
-.tab{padding:8px 16px;cursor:pointer}
-.tab.active{background:#1e293b}
-#search{margin:12px;width:300px;padding:8px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:6px;border-bottom:1px solid #1e293b;text-align:center}
-tr:hover{background:#1e293b;cursor:pointer}
-button{background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer}
+:root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --text: #e0e0e0;
+    --accent: #007bff;
+    --green: #00c853;
+    --red: #ff3d00;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+.container { max-width: 1000px; margin: 0 auto; }
+
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+h1 { margin: 0; font-size: 1.5rem; }
+.subtitle { color: #888; font-weight: 300; }
+.status-indicator { color: var(--green); font-size: 0.8rem; }
+
+/* Search */
+.search-box { position: relative; margin-bottom: 20px; }
+input { 
+    width: 100%; padding: 12px; background: var(--card); border: 1px solid #333; 
+    color: white; border-radius: 4px; font-size: 1rem;
+}
+.dropdown {
+    position: absolute; width: 100%; background: #252525; z-index: 100;
+    max-height: 200px; overflow-y: auto; border: 1px solid #333; display: none;
+}
+.dropdown-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #333; }
+.dropdown-item:hover { background: #333; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
+th { text-align: left; padding: 12px; background: #252525; color: #888; font-size: 0.9rem; }
+td { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; }
+tr:hover { background: #2a2a2a; }
+
+.up { color: var(--green); }
+.down { color: var(--red); }
+.del-btn { color: #888; cursor: pointer; padding: 5px; }
+.del-btn:hover { color: var(--red); }
