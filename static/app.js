@@ -14,7 +14,7 @@ let tickColors = {};
 let currentSortColumn = '';
 let currentSortDirection = 1; // 1 for Ascending, -1 for Descending
 
-// NEW: Search request tracker to prevent glitches from typing too fast
+// Search request tracker to prevent glitches from typing too fast
 let searchAborter = null;
 
 /* ---------- ADD WATCHLIST ---------- */
@@ -204,7 +204,12 @@ function startPriceRefresh() {
     priceTimer = setInterval(loadPrices, 5000);
 }
 
+/* ---------- REMOVE STOCK (WITH CONFIRMATION) ---------- */
 async function removeStock(sym) {
+    // NEW: Safety confirmation prompt before deletion
+    const isConfirmed = window.confirm(`Are you sure you want to remove ${sym} from this watchlist?`);
+    if (!isConfirmed) return; // Stop if the user clicks "Cancel"
+
     await fetch(`/remove?wid=${activeWatchlist}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
