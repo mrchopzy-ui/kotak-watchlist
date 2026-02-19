@@ -9,6 +9,7 @@ USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
+DATA_FILE = "data/nse_eq_scrip_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
@@ -34,13 +35,6 @@ def init_db():
             exchange_token TEXT
         )
     """)
-    
-    # Safely upgrade existing database to support F&O segments
-    try:
-        cur.execute("ALTER TABLE stocks ADD COLUMN segment TEXT DEFAULT 'nse_cm'")
-    except sqlite3.OperationalError:
-        pass # Column already exists
-        
     cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
     con.commit()
     con.close()
@@ -70,20 +64,8 @@ def login():
 
 login()
 
-# Load multiple Scrip Masters for Equity and F&O
-FILES_TO_LOAD = [
-    ("nse_eq_scrip_master.csv", "nse_cm"),
-    ("nse_fo_scrip_master.csv", "nse_fo"),
-    ("bse_fo_scrip_master.csv", "bse_fo")
-]
-
-for filename, segment in FILES_TO_LOAD:
-    if os.path.exists(filename):
-        with open(filename, encoding="latin-1") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                row["segment"] = segment
-                SCRIPS.append(row)
+with open("nse_eq_scrip_master.csv", encoding="latin-1") as f:
+    SCRIPS = list(csv.DictReader(f))
 
 def get_watchlists():
     con = db()
@@ -107,18 +89,19 @@ def index():
 
 @app.route("/search")
 def search():
-    q = request.args.get("q", "").lower()
-    results = []
-    for s in SCRIPS:
-        if q in s.get("trading_symbol", "").lower():
-            results.append({
-                "trading_symbol": s["trading_symbol"],
-                "exchange_token": s["exchange_token"],
-                "segment": s["segment"]
-            })
-            if len(results) >= 15:
-                break
-    return jsonify(results)
+    q = request.args.get("q", "").strip().lower()
+    if not q:
+        return jsonify([])
+    
+    # 1. Find matches that contain the query anywhere
+    matches = [s for s in SCRIPS if q in s["trading_symbol"].lower()]
+    
+    # 2. Sort them intelligently:
+    # First priority: Stocks that START with the exact query.
+    # Second priority: Shorter names rise to the top (more exact matches).
+    matches.sort(key=lambda s: (not s["trading_symbol"].lower().startswith(q), len(s["trading_symbol"])))
+    
+    return jsonify(matches[:10])
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
@@ -142,9 +125,9 @@ def add_stock():
     wid = request.args.get("wid")
     con = db()
     con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token, segment)
-        VALUES (?, ?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"], s.get("segment", "nse_cm")))
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
+        VALUES (?, ?, ?)
+    """, (wid, s["trading_symbol"], s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
@@ -165,7 +148,7 @@ def prices():
     wid = request.args.get("wid")
     con = db()
     stocks = con.execute(
-        "SELECT trading_symbol, exchange_token, segment FROM stocks WHERE watchlist_id=?",
+        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
         (wid,)
     ).fetchall()
     con.close()
@@ -173,8 +156,7 @@ def prices():
     if not stocks:
         return jsonify([])
 
-    # Handle different segments (NSE EQ, NSE FO, BSE FO) dynamically
-    queries = ",".join([f"{s[2] if s[2] else 'nse_cm'}|{s[1]}" for s in stocks])
+    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
     url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
