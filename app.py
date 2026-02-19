@@ -64,7 +64,7 @@ def login():
 
 login()
 
-with open(DATA_FILE, newline="", encoding="latin-1") as f:
+with open(DATA_FILE, "", encoding="latin-1") as f:
     SCRIPS = list(csv.DictReader(f))
 
 def get_watchlists():
