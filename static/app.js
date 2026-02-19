@@ -6,6 +6,10 @@ const addBtn = document.getElementById("addWatchlist");
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
 
+// NEW: Objects to track real-time tick changes and colors
+let previousPrices = {};
+let tickColors = {};
+
 /* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
     const name = prompt("New watchlist name:");
@@ -24,6 +28,11 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
+        
+        // Reset tick memory when switching to a different watchlist
+        previousPrices = {};
+        tickColors = {};
+        
         startPriceRefresh();
     };
 
@@ -74,15 +83,30 @@ async function loadPrices() {
     data.forEach(s => {
         const tv = s.symbol.replace("-EQ", "");
         
-        // Determine if the price is up or down for coloring
-        const colorClass = s.pct >= 0 ? "price-up" : "price-down";
+        // Determine LTP tick direction (Up or Down compared to 5 seconds ago)
+        let ltpClass = tickColors[s.symbol] || ""; // Keep the previous color if price didn't change
+        
+        if (previousPrices[s.symbol] !== undefined) {
+            if (s.ltp > previousPrices[s.symbol]) {
+                ltpClass = "price-up";
+            } else if (s.ltp < previousPrices[s.symbol]) {
+                ltpClass = "price-down";
+            }
+        }
+        
+        // Save the current state for the next 5-second refresh
+        previousPrices[s.symbol] = s.ltp;
+        tickColors[s.symbol] = ltpClass;
+
+        // Day change % is always based on overall daily performance
+        const dayClass = s.pct >= 0 ? "price-up" : "price-down";
         
         tbody.innerHTML += `
         <tr onclick="openChart('${tv}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
-            <td class="${colorClass}">${s.ltp.toFixed(2)}</td>
-            <td class="${colorClass}">${s.pct.toFixed(2)}%</td>
+            <td class="${ltpClass}">${s.ltp.toFixed(2)}</td>
+            <td class="${dayClass}">${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
@@ -113,6 +137,11 @@ async function removeStock(sym) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
+    
+    // Clear the memory for the removed stock
+    delete previousPrices[sym];
+    delete tickColors[sym];
+    
     loadPrices();
 }
 
