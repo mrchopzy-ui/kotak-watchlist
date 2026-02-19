@@ -1,41 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Asset Management | Watchlist v2</title>
+    <title>Nexus Asset Management</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>NEXUS <span class="subtitle">Asset Management</span></h1>
-            <div class="status-indicator">● Live</div>
-        </header>
 
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search Symbol (e.g. RELIANCE)..." autocomplete="off">
-            <div id="searchResults" class="dropdown"></div>
-        </div>
+<h1>Nexus Asset Management</h1>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Company Name</th>
-                        <th>LTP</th>
-                        <th>% Chg</th>
-                        <th>Volume</th>
-                        <th>OHLC</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="watchlistBody">
-                    </tbody>
-            </table>
-        </div>
-    </div>
-    <script src="/static/app.js"></script>
+<div id="tabs">
+    {% for w in watchlists %}
+    <div class="tab" data-id="{{w[0]}}">{{w[1]}}</div>
+    {% endfor %}
+    <button id="addWatchlist">+</button>
+</div>
+
+<input id="search" placeholder="Type stock symbol">
+<div id="suggestions"></div>
+
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Company Name</th>
+<th>LTP</th>
+<th>%</th>
+<th>Volume</th>
+<th>Open</th>
+<th>High</th>
+<th>Low</th>
+<th>Close</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="watchlist"></tbody>
+</table>
+
+<script src="/static/app.js"></script>
 </body>
 </html>
