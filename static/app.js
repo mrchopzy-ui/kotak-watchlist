@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return num;
     }
 
+    // --- DEBOUNCE FUNCTION ---
+    // Prevents the API from being hit on every single keystroke
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
+
     // --- LOAD WATCHLIST ---
     async function fetchWatchlist() {
         try {
@@ -59,8 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- SEARCH LOGIC (FIXED) ---
-    searchInput.addEventListener('input', async (e) => {
+    // --- SEARCH LOGIC (DEBOUNCED) ---
+    const performSearch = async (e) => {
         const query = e.target.value.trim();
         
         if (query.length < 2) {
@@ -68,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        console.log(`Searching for: ${query}`); // DEBUG
+        console.log(`Searching for: ${query}`); 
         
         try {
             const res = await fetch(`/api/search?q=${query}`);
@@ -95,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     searchResults.appendChild(div);
                 });
             } else {
-                // Show "No Results" message
                 const div = document.createElement('div');
                 div.className = 'dropdown-item';
                 div.style.color = '#888';
@@ -105,7 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error("Search API Failed:", err);
         }
-    });
+    };
+
+    // Attach the debounced version of the search function
+    // 300ms is the standard "wait" time for UI inputs
+    searchInput.addEventListener('input', debounce(performSearch, 300));
 
     // Hide dropdown on click outside
     document.addEventListener('click', (e) => {
