@@ -25,30 +25,20 @@
 <table>
     <thead>
         <tr>
-            <th>Symbol</th>
-            <th>Company Name</th>
-            <th>LTP</th>
-            <th>%</th>
-            <th>Volume</th>
-            <th>Open</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Close</th>
+            <th data-sort="symbol">Symbol</th>
+            <th data-sort="company_name">Company Name</th>
+            <th data-sort="ltp">LTP</th>
+            <th data-sort="pct">%</th>
+            <th data-sort="volume">Volume</th>
+            <th data-sort="open">Open</th>
+            <th data-sort="high">High</th>
+            <th data-sort="low">Low</th>
+            <th data-sort="close">Close</th>
             <th>Delete</th>
         </tr>
     </thead>
     <tbody id="watchlist"></tbody>
 </table>
-
-<div id="chartModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span id="modalTitle">Chart</span>
-            <span class="close-modal" onclick="closeChart()">&times;</span>
-        </div>
-        <div id="tv-container"></div>
-    </div>
-</div>
 
 <script src="/static/app.js"></script>
 </body>
