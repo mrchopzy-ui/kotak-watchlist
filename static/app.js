@@ -6,9 +6,13 @@ const addBtn = document.getElementById("addWatchlist");
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
 
-// NEW: Objects to track real-time tick changes and colors
+// Objects to track real-time tick changes and colors
 let previousPrices = {};
 let tickColors = {};
+
+// NEW: State variables for column sorting persistence
+let sortCol = null;
+let sortAsc = false;
 
 /* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
@@ -29,7 +33,7 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
         
-        // Reset tick memory when switching to a different watchlist
+        // Reset tick memory and sorting when switching watchlists
         previousPrices = {};
         tickColors = {};
         
@@ -74,17 +78,71 @@ search.addEventListener("input", async () => {
     });
 });
 
+/* ---------- NEW: COLUMN SORTING LOGIC ---------- */
+// Helper to convert formatted volume (e.g., "1.5M", "500K") back to numbers for accurate sorting
+function parseVolume(volStr) {
+    if (!volStr || typeof volStr !== 'string') return 0;
+    let num = parseFloat(volStr);
+    if (volStr.includes('K')) return num * 1000;
+    if (volStr.includes('M')) return num * 1000000;
+    if (volStr.includes('B')) return num * 1000000000;
+    return num;
+}
+
+// Automatically attach click listeners to existing table headers
+const colKeys = ["symbol", "company_name", "ltp", "pct", "volume", "open", "high", "low", "close"];
+document.querySelectorAll("thead th").forEach((th, index) => {
+    if (index < colKeys.length) { // Skip the 'Delete' column
+        th.style.cursor = "pointer";
+        th.title = "Click to sort";
+        
+        th.onclick = () => {
+            const key = colKeys[index];
+            if (sortCol === key) {
+                sortAsc = !sortAsc; // Toggle direction if clicking the same column
+            } else {
+                sortCol = key;
+                sortAsc = false; // Default to descending (highest first) for new columns
+            }
+            
+            // Update UI arrows on headers
+            document.querySelectorAll("thead th").forEach(el => el.innerText = el.innerText.replace(/ [▲▼]/, ''));
+            th.innerText += sortAsc ? " ▲" : " ▼";
+            
+            loadPrices(); // Re-render immediately without waiting for the 5-second interval
+        };
+    }
+});
+
 /* ---------- LOAD PRICES ---------- */
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
-    const data = await res.json();
+    let data = await res.json();
+    
+    // NEW: Apply sorting before rendering the table
+    if (sortCol) {
+        data.sort((a, b) => {
+            let valA = a[sortCol];
+            let valB = b[sortCol];
+            
+            if (sortCol === "volume") {
+                valA = parseVolume(valA);
+                valB = parseVolume(valB);
+            }
+            
+            if (valA < valB) return sortAsc ? -1 : 1;
+            if (valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+        });
+    }
+
     tbody.innerHTML = "";
 
     data.forEach(s => {
         const tv = s.symbol.replace("-EQ", "");
         
         // Determine LTP tick direction (Up or Down compared to 5 seconds ago)
-        let ltpClass = tickColors[s.symbol] || ""; // Keep the previous color if price didn't change
+        let ltpClass = tickColors[s.symbol] || ""; 
         
         if (previousPrices[s.symbol] !== undefined) {
             if (s.ltp > previousPrices[s.symbol]) {
@@ -101,6 +159,7 @@ async function loadPrices() {
         // Day change % is always based on overall daily performance
         const dayClass = s.pct >= 0 ? "price-up" : "price-down";
         
+        // Render rows
         tbody.innerHTML += `
         <tr onclick="openChart('${tv}')">
             <td>${s.symbol}</td>
@@ -145,5 +204,6 @@ async function removeStock(sym) {
     loadPrices();
 }
 
+// Initialize
 document.querySelector(".tab[data-id]").classList.add("active");
 startPriceRefresh();
