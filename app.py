@@ -32,6 +32,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             watchlist_id INTEGER,
             trading_symbol TEXT,
+            company_name TEXT,
             exchange_token TEXT
         )
     """)
@@ -64,7 +65,7 @@ def login():
 
 login()
 
-with open("nse_eq_scrip_master.csv", encoding="latin-1") as f:
+with open(DATA_FILE, newline="", encoding="utf-8") as f:
     SCRIPS = list(csv.DictReader(f))
 
 def get_watchlists():
@@ -94,16 +95,18 @@ def search():
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
+    name = request.json.get("name")
     con = db()
-    con.execute("INSERT INTO watchlists(name) VALUES (?)", (request.json["name"],))
+    con.execute("INSERT INTO watchlists(name) VALUES (?)", (name,))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/watchlist/<int:wid>", methods=["PUT"])
 def rename_watchlist(wid):
+    name = request.json.get("name")
     con = db()
-    con.execute("UPDATE watchlists SET name=? WHERE id=?", (request.json["name"], wid))
+    con.execute("UPDATE watchlists SET name=? WHERE id=?", (name, wid))
     con.commit()
     con.close()
     return "", 204
@@ -114,19 +117,21 @@ def add_stock():
     wid = request.args.get("wid")
     con = db()
     con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
-        VALUES (?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"]))
+        INSERT INTO stocks (watchlist_id, trading_symbol, company_name, exchange_token)
+        VALUES (?, ?, ?, ?)
+    """, (wid, s["trading_symbol"], s["company_name"], s["exchange_token"]))
     con.commit()
     con.close()
     return "", 204
 
 @app.route("/remove", methods=["POST"])
 def remove_stock():
+    sym = request.json["trading_symbol"]
+    wid = request.args.get("wid")
     con = db()
     con.execute(
         "DELETE FROM stocks WHERE watchlist_id=? AND trading_symbol=?",
-        (request.args.get("wid"), request.json["trading_symbol"])
+        (wid, sym)
     )
     con.commit()
     con.close()
@@ -137,7 +142,7 @@ def prices():
     wid = request.args.get("wid")
     con = db()
     stocks = con.execute(
-        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+        "SELECT trading_symbol, company_name, exchange_token FROM stocks WHERE watchlist_id=?",
         (wid,)
     ).fetchall()
     con.close()
@@ -145,7 +150,7 @@ def prices():
     if not stocks:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
+    queries = ",".join([f"nse_cm|{s[2]}" for s in stocks])
     url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
@@ -154,7 +159,7 @@ def prices():
         o = q.get("ohlc", {})
         out.append({
             "symbol": s[0],
-            "company_name": q.get("instrumentName", s[0].replace("-EQ", "")),
+            "company_name": s[1],
             "ltp": float(q.get("ltp", 0)),
             "pct": float(q.get("per_change", 0)),
             "volume": format_volume(q.get("last_volume", 0)),
