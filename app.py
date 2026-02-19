@@ -9,7 +9,8 @@ USER_ID = os.getenv("KOTAK_USER_ID")
 MPIN = os.getenv("KOTAK_MPIN")
 TOTP_SECRET = os.getenv("KOTAK_TOTP_SECRET")
 
-DATA_FILE = "data/nse_eq_scrip_master.csv"
+# Make sure this CSV contains both EQ and FO contracts from Kotak
+DATA_FILE = "nse_eq_scrip_master.csv"
 DB_FILE = "watchlists.db"
 
 SESSION = {}
@@ -35,6 +36,13 @@ def init_db():
             exchange_token TEXT
         )
     """)
+    
+    # NEW: Safely add the 'segment' column to support FnO without breaking existing databases
+    try:
+        cur.execute("ALTER TABLE stocks ADD COLUMN segment TEXT DEFAULT 'nse_cm'")
+    except sqlite3.OperationalError:
+        pass # Column already exists, safe to ignore
+        
     cur.execute("INSERT OR IGNORE INTO watchlists(name) VALUES ('Watchlist 1')")
     con.commit()
     con.close()
@@ -64,7 +72,8 @@ def login():
 
 login()
 
-with open("nse_eq_scrip_master.csv", encoding="latin-1") as f:
+# Load the Scrip Master
+with open(DATA_FILE, encoding="latin-1") as f:
     SCRIPS = list(csv.DictReader(f))
 
 def get_watchlists():
@@ -90,7 +99,30 @@ def index():
 @app.route("/search")
 def search():
     q = request.args.get("q", "").lower()
-    return jsonify([s for s in SCRIPS if q in s["trading_symbol"].lower()][:10])
+    results = []
+    for s in SCRIPS:
+        if q in s["trading_symbol"].lower():
+            item = dict(s)
+            
+            # NEW: Determine if the instrument is Equity (nse_cm) or FnO (nse_fo)
+            sym = item["trading_symbol"].upper()
+            segment = "nse_cm" # Default to equity
+            
+            # Check common CSV column names for segment info
+            if item.get("segment"): 
+                segment = item["segment"]
+            elif item.get("instrumentType") in ["FUTIDX", "OPTIDX", "FUTSTK", "OPTSTK"]: 
+                segment = "nse_fo"
+            # Fallback to symbol naming heuristics
+            elif "FUT" in sym or "CE" in sym or "PE" in sym or "OPT" in sym:
+                segment = "nse_fo"
+                
+            item["segment"] = segment
+            results.append(item)
+            
+            if len(results) == 10: 
+                break
+    return jsonify(results)
 
 @app.route("/watchlist", methods=["POST"])
 def create_watchlist():
@@ -112,11 +144,15 @@ def rename_watchlist(wid):
 def add_stock():
     s = request.json
     wid = request.args.get("wid")
+    
+    # Ensure segment is captured, fallback to nse_cm if missing
+    segment = s.get("segment", "nse_cm")
+    
     con = db()
     con.execute("""
-        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token)
-        VALUES (?, ?, ?)
-    """, (wid, s["trading_symbol"], s["exchange_token"]))
+        INSERT INTO stocks (watchlist_id, trading_symbol, exchange_token, segment)
+        VALUES (?, ?, ?, ?)
+    """, (wid, s["trading_symbol"], s["exchange_token"], segment))
     con.commit()
     con.close()
     return "", 204
@@ -136,8 +172,9 @@ def remove_stock():
 def prices():
     wid = request.args.get("wid")
     con = db()
+    # NEW: Now fetching the segment from the database as well
     stocks = con.execute(
-        "SELECT trading_symbol, exchange_token FROM stocks WHERE watchlist_id=?",
+        "SELECT trading_symbol, exchange_token, segment FROM stocks WHERE watchlist_id=?",
         (wid,)
     ).fetchall()
     con.close()
@@ -145,7 +182,8 @@ def prices():
     if not stocks:
         return jsonify([])
 
-    queries = ",".join([f"nse_cm|{s[1]}" for s in stocks])
+    # NEW: Dynamically build the query using the correct segment (nse_cm or nse_fo)
+    queries = ",".join([f"{s[2]}|{s[1]}" for s in stocks])
     url = f"{SESSION['base']}/script-details/1.0/quotes/neosymbol/{queries}/all"
     data = requests.get(url, headers={"Authorization": ACCESS_TOKEN}).json()
 
@@ -166,4 +204,4 @@ def prices():
     return jsonify(out)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=10000)
