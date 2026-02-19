@@ -2,17 +2,13 @@ const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
+const modal = document.getElementById("chartModal");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
 
-// Objects to track real-time tick changes and colors
 let previousPrices = {};
 let tickColors = {};
-
-// NEW: State variables for column sorting persistence
-let sortCol = null;
-let sortAsc = false;
 
 /* ---------- ADD WATCHLIST ---------- */
 addBtn.onclick = async () => {
@@ -32,11 +28,8 @@ document.querySelectorAll(".tab[data-id]").forEach(tab => {
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         activeWatchlist = tab.dataset.id;
-        
-        // Reset tick memory and sorting when switching watchlists
         previousPrices = {};
         tickColors = {};
-        
         startPriceRefresh();
     };
 
@@ -78,70 +71,15 @@ search.addEventListener("input", async () => {
     });
 });
 
-/* ---------- NEW: COLUMN SORTING LOGIC ---------- */
-// Helper to convert formatted volume (e.g., "1.5M", "500K") back to numbers for accurate sorting
-function parseVolume(volStr) {
-    if (!volStr || typeof volStr !== 'string') return 0;
-    let num = parseFloat(volStr);
-    if (volStr.includes('K')) return num * 1000;
-    if (volStr.includes('M')) return num * 1000000;
-    if (volStr.includes('B')) return num * 1000000000;
-    return num;
-}
-
-// Automatically attach click listeners to existing table headers
-const colKeys = ["symbol", "company_name", "ltp", "pct", "volume", "open", "high", "low", "close"];
-document.querySelectorAll("thead th").forEach((th, index) => {
-    if (index < colKeys.length) { // Skip the 'Delete' column
-        th.style.cursor = "pointer";
-        th.title = "Click to sort";
-        
-        th.onclick = () => {
-            const key = colKeys[index];
-            if (sortCol === key) {
-                sortAsc = !sortAsc; // Toggle direction if clicking the same column
-            } else {
-                sortCol = key;
-                sortAsc = false; // Default to descending (highest first) for new columns
-            }
-            
-            // Update UI arrows on headers
-            document.querySelectorAll("thead th").forEach(el => el.innerText = el.innerText.replace(/ [▲▼]/, ''));
-            th.innerText += sortAsc ? " ▲" : " ▼";
-            
-            loadPrices(); // Re-render immediately without waiting for the 5-second interval
-        };
-    }
-});
-
 /* ---------- LOAD PRICES ---------- */
 async function loadPrices() {
     const res = await fetch(`/prices?wid=${activeWatchlist}`);
-    let data = await res.json();
-    
-    // NEW: Apply sorting before rendering the table
-    if (sortCol) {
-        data.sort((a, b) => {
-            let valA = a[sortCol];
-            let valB = b[sortCol];
-            
-            if (sortCol === "volume") {
-                valA = parseVolume(valA);
-                valB = parseVolume(valB);
-            }
-            
-            if (valA < valB) return sortAsc ? -1 : 1;
-            if (valA > valB) return sortAsc ? 1 : -1;
-            return 0;
-        });
-    }
-
+    const data = await res.json();
+    if (!data) return;
     tbody.innerHTML = "";
 
     data.forEach(s => {
-        const tv = s.symbol.replace("-EQ", "");
-        
-        // Determine LTP tick direction (Up or Down compared to 5 seconds ago)
+        const tvSym = s.symbol.replace("-EQ", "");
         let ltpClass = tickColors[s.symbol] || ""; 
         
         if (previousPrices[s.symbol] !== undefined) {
@@ -152,16 +90,12 @@ async function loadPrices() {
             }
         }
         
-        // Save the current state for the next 5-second refresh
         previousPrices[s.symbol] = s.ltp;
         tickColors[s.symbol] = ltpClass;
-
-        // Day change % is always based on overall daily performance
         const dayClass = s.pct >= 0 ? "price-up" : "price-down";
         
-        // Render rows
         tbody.innerHTML += `
-        <tr onclick="openChart('${tv}')">
+        <tr onclick="openChart('${tvSym}', '${s.company_name}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td class="${ltpClass}">${s.ltp.toFixed(2)}</td>
@@ -178,10 +112,35 @@ async function loadPrices() {
     });
 }
 
-/* ---------- TRADINGVIEW ---------- */
-function openChart(sym) {
-    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
+/* ---------- NEW: EMBEDDED CHART LOGIC ---------- */
+function openChart(sym, name) {
+    document.getElementById("modalTitle").innerText = `NSE: ${name}`;
+    const container = document.getElementById("tv-container");
+    
+    // Create the TradingView Iframe
+    container.innerHTML = `
+        <iframe 
+            src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_762ae&symbol=NSE:${sym}&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Asia/Kolkata&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en"
+            width="100%" 
+            height="100%" 
+            frameborder="0" 
+            allowtransparency="true" 
+            scrolling="no" 
+            allowfullscreen>
+        </iframe>`;
+    
+    modal.style.display = "block";
 }
+
+function closeChart() {
+    modal.style.display = "none";
+    document.getElementById("tv-container").innerHTML = ""; // Stop the iframe
+}
+
+// Close modal if user clicks outside of the box
+window.onclick = (event) => {
+    if (event.target == modal) closeChart();
+};
 
 /* ---------- AUTO REFRESH ---------- */
 function startPriceRefresh() {
@@ -196,14 +155,10 @@ async function removeStock(sym) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({trading_symbol: sym})
     });
-    
-    // Clear the memory for the removed stock
     delete previousPrices[sym];
     delete tickColors[sym];
-    
     loadPrices();
 }
 
-// Initialize
 document.querySelector(".tab[data-id]").classList.add("active");
 startPriceRefresh();
