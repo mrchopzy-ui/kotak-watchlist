@@ -13,15 +13,18 @@ body {
 .tabs {
     background: white;
     padding: 10px 30px;
+    overflow-x: auto; /* Allows scrolling through tabs on mobile */
+    white-space: nowrap;
 }
 
 .tab {
-    padding: 6px 14px;
+    padding: 8px 16px;
     margin-right: 6px;
     border-radius: 6px;
     border: none;
     background: #e9ecf1;
     cursor: pointer;
+    display: inline-block;
 }
 
 .tab.active {
@@ -36,12 +39,13 @@ body {
 .search-box {
     margin: 20px 30px;
     position: relative;
-    width: 300px;
+    max-width: 300px;
 }
 
 #search {
     width: 100%;
     padding: 10px;
+    box-sizing: border-box;
 }
 
 #suggestions {
@@ -61,16 +65,27 @@ body {
     background: #eef2f7;
 }
 
+/* Table Container for Mobile Scrolling */
 table {
     margin: 0 30px 30px;
     width: calc(100% - 60px);
     background: white;
     border-collapse: collapse;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 th, td {
-    padding: 10px;
+    padding: 12px 10px;
     text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+tr {
+    cursor: pointer;
+}
+
+tr:hover {
+    background-color: #f8f9fa;
 }
 
 /* Price Colors */
@@ -84,7 +99,7 @@ th, td {
     font-weight: bold;
 }
 
-/* ---------- NEW: MODAL STYLES ---------- */
+/* --- MODAL STYLES --- */
 .modal {
     display: none; 
     position: fixed; 
@@ -93,7 +108,7 @@ th, td {
     top: 0;
     width: 100%; 
     height: 100%; 
-    background-color: rgba(0,0,0,0.7); 
+    background-color: rgba(0,0,0,0.85); 
 }
 
 .modal-content {
@@ -101,15 +116,15 @@ th, td {
     margin: 2% auto; 
     padding: 0;
     border-radius: 8px;
-    width: 90%;
-    height: 85%;
+    width: 95%; /* Wider on mobile */
+    height: 90%;
     overflow: hidden;
 }
 
 .modal-header {
     background: #0b1c2d;
     color: white;
-    padding: 10px 20px;
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -123,13 +138,43 @@ th, td {
 
 #tv-container {
     width: 100%;
-    height: calc(100% - 45px);
+    height: calc(100% - 50px);
 }
 
-tr {
-    cursor: pointer;
-}
+/* --- NEW: MOBILE RESPONSIVE QUERIES --- */
+@media screen and (max-width: 768px) {
+    .top-bar {
+        padding: 10px 20px;
+        text-align: center;
+    }
 
-tr:hover {
-    background-color: #f1f1f1;
+    .top-bar h1 {
+        font-size: 1.2rem;
+    }
+
+    .search-box {
+        margin: 15px 20px;
+        width: calc(100% - 40px);
+        max-width: none;
+    }
+
+    /* Make table scrollable horizontally on small screens */
+    table {
+        margin: 0 0 20px 0;
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .modal-header {
+        padding: 15px;
+    }
 }
