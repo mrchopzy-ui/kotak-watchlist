@@ -73,12 +73,16 @@ async function loadPrices() {
 
     data.forEach(s => {
         const tv = s.symbol.replace("-EQ", "");
+        
+        // Determine if the price is up or down for coloring
+        const colorClass = s.pct >= 0 ? "price-up" : "price-down";
+        
         tbody.innerHTML += `
         <tr onclick="openChart('${tv}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
-            <td>${s.ltp.toFixed(2)}</td>
-            <td>${s.pct.toFixed(2)}%</td>
+            <td class="${colorClass}">${s.ltp.toFixed(2)}</td>
+            <td class="${colorClass}">${s.pct.toFixed(2)}%</td>
             <td>${s.volume}</td>
             <td>${s.open}</td>
             <td>${s.high}</td>
