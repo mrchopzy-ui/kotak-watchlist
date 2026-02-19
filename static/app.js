@@ -55,7 +55,11 @@ search.addEventListener("input", async () => {
     data.forEach(s => {
         const d = document.createElement("div");
         d.className = "suggestion-item";
-        d.innerText = s.trading_symbol;
+        
+        // Add a visual badge so you know if it's Equity or F&O
+        let badge = s.segment === "nse_cm" ? "EQ" : s.segment.toUpperCase();
+        d.innerHTML = `<strong>${s.trading_symbol}</strong> <span style="font-size: 0.8em; color: gray;">[${badge}]</span>`;
+        
         d.onclick = async () => {
             await fetch(`/add?wid=${activeWatchlist}`, {
                 method: "POST",
