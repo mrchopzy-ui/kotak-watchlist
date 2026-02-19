@@ -72,3 +72,14 @@ th, td {
     padding: 10px;
     text-align: center;
 }
+
+/* ---------- NEW: Price Colors ---------- */
+.price-up {
+    color: #089981;
+    font-weight: bold;
+}
+
+.price-down {
+    color: #F23645;
+    font-weight: bold;
+}
