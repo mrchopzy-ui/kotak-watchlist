@@ -2,7 +2,6 @@ const search = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
 const tbody = document.getElementById("watchlist");
 const addBtn = document.getElementById("addWatchlist");
-const modal = document.getElementById("chartModal");
 
 let activeWatchlist = document.querySelector(".tab[data-id]").dataset.id;
 let priceTimer = null;
@@ -95,7 +94,7 @@ async function loadPrices() {
         const dayClass = s.pct >= 0 ? "price-up" : "price-down";
         
         tbody.innerHTML += `
-        <tr onclick="openChart('${tvSym}', '${s.company_name}')">
+        <tr onclick="openChart('${tvSym}')">
             <td>${s.symbol}</td>
             <td>${s.company_name}</td>
             <td class="${ltpClass}">${s.ltp.toFixed(2)}</td>
@@ -112,35 +111,10 @@ async function loadPrices() {
     });
 }
 
-/* ---------- NEW: EMBEDDED CHART LOGIC ---------- */
-function openChart(sym, name) {
-    document.getElementById("modalTitle").innerText = `NSE: ${name}`;
-    const container = document.getElementById("tv-container");
-    
-    // Create the TradingView Iframe
-    container.innerHTML = `
-        <iframe 
-            src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_762ae&symbol=NSE:${sym}&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Asia/Kolkata&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en"
-            width="100%" 
-            height="100%" 
-            frameborder="0" 
-            allowtransparency="true" 
-            scrolling="no" 
-            allowfullscreen>
-        </iframe>`;
-    
-    modal.style.display = "block";
+/* ---------- TRADINGVIEW ---------- */
+function openChart(sym) {
+    window.open(`https://www.tradingview.com/chart/?symbol=NSE:${sym}`, "_blank");
 }
-
-function closeChart() {
-    modal.style.display = "none";
-    document.getElementById("tv-container").innerHTML = ""; // Stop the iframe
-}
-
-// Close modal if user clicks outside of the box
-window.onclick = (event) => {
-    if (event.target == modal) closeChart();
-};
 
 /* ---------- AUTO REFRESH ---------- */
 function startPriceRefresh() {
